@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "SOM Utils",
+  "version": "1.0",
+  "description": "Chrome extension for useful stats on Hack Club's Summer of Making",
+  "permissions": [
+    "activeTab"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://summer.hackclub.com/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"]
+    }
+  ],
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
