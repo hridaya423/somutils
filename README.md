@@ -28,7 +28,7 @@ Compatible with both Chrome, Firefox and Safari!
 1. Open Firefox and go to `about:debugging`
 2. Click "This Firefox"
 3. Click "Load Temporary Add-on"
-4. Select the `manifest_v2.json` file from the `build_firefox` folder
+4. Select the `manifest_v2.json` file
 
 ### Safari
 1. Click the green code button on this page and click `Download ZIP`
