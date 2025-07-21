@@ -19,6 +19,13 @@ Compatible with both Chrome and Firefox!
 
 ## Installation
 
+### Chrome
 1. Open Chrome and go to `chrome://extensions/`
 2. Enable "Developer mode" in the top right
-3. Click "Load unpacked" and select this folder
+3. Click "Load unpacked" and select the `build_chrome` folder
+
+### Firefox
+1. Open Firefox and go to `about:debugging`
+2. Click "This Firefox"
+3. Click "Load Temporary Add-on"
+4. Select the `manifest_v2.json` file from the `build_firefox` folder
