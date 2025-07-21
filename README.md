@@ -2,7 +2,7 @@
 
 A browser extension that adds useful features and stats to Summer of Making site.
 
-Compatible with both Chrome and Firefox and Safari!
+Compatible with both Chrome, Firefox and Safari!
 
 ## Features
 
@@ -29,3 +29,13 @@ Compatible with both Chrome and Firefox and Safari!
 2. Click "This Firefox"
 3. Click "Load Temporary Add-on"
 4. Select the `manifest_v2.json` file from the `build_firefox` folder
+
+### Safari
+1. Click the green code button on this page and click `Download ZIP`
+2. Unzip what you just downloaded
+3. Open Safari and do `CMD + ,`
+4. Go to settings and check the checkbox saying `Show features for web developers`
+5. Go to the developer tab
+6. Check the `Allow unsigned extensions` checkbox at the bottom
+7. Click `Add temporary extension`
+8. Select the folder you downloaded & unzipped earlier
