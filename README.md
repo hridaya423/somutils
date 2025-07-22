@@ -12,7 +12,7 @@ Compatible with both Chrome, Firefox and Safari!
   - Most/Least Shells earned
   - Best/Worst Efficiency (shells/hour)
   - Alphabetical (A-Z, Z-A)
-- **Copy & Paste Files**: Paste images/files directly into file inputs
+- **Paste Files for devlogs**: Paste images/files directly into devlogs!
 - **Personalized Time Estimates**: Uses your efficiency data for accurate estimates
 - **Goal Tracking System**: Add shop items to goals and track progress
 - **Advanced Stats**: Interactive calculators and efficiency comparisons
