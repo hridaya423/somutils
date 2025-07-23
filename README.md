@@ -19,10 +19,7 @@ Compatible with both Chrome, Firefox and Safari!
 
 ## Installation
 
-### Chrome
-1. Open Chrome and go to `chrome://extensions/`
-2. Enable "Developer mode" in the top right
-3. Click "Load unpacked" and select the `build_chrome` folder
+### [Chrome](https://chromewebstore.google.com/detail/som-utils/jamcebgnbkndmjoekldaeefjifeohpdg)
 
 ### Firefox
 1. Open Firefox and go to `about:debugging`
