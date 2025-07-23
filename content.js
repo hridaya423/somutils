@@ -1023,7 +1023,10 @@ function createGoalsProgressHeader() {
   header.setAttribute('role', 'region');
   header.setAttribute('aria-label', 'Goals progress tracker');
   
-  const averageEfficiency = getUserAverageEfficiency();
+  let averageEfficiency = getUserAverageEfficiency();
+  if (!averageEfficiency) {
+    averageEfficiency = 10;
+  }
   const hoursRemaining = averageEfficiency ? progressData.shellsRemaining / averageEfficiency : 0;
   
   header.innerHTML = `
