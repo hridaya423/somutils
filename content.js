@@ -13,6 +13,11 @@ function parseShellsString(shellsText) {
     return 0;
   }
   
+  const totalMatch = shellsText.match(/(\d+(?:\.\d+)?)\s*shells\s+total/);
+  if (totalMatch) {
+    return parseFloat(totalMatch[1]);
+  }
+  
   const match = shellsText.match(/(\d+(?:\.\d+)?)\s*shells/);
   return match ? parseFloat(match[1]) : 0;
 }
