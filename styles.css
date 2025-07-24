@@ -1668,6 +1668,14 @@ input[type="file"][data-som-enhanced]:hover {
   opacity: 0.8;
 }
 
+.som-tooltip-elo {
+  color: #4A2D24;
+  font-size: 0.7rem;
+  margin-bottom: 2px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
 .som-tooltip-arrow {
   position: absolute;
   top: 100%;

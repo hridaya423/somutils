@@ -447,6 +447,7 @@ function createVoteEstimateDisplay(estimatedVotes, confidence, details = null) {
       <div class="som-tooltip-content">
         <div class="som-tooltip-performance">${performanceText} Performance</div>
         <div class="som-tooltip-stats">${multiplier}x shells/hour (vs 10x avg)</div>
+        <div class="som-tooltip-elo">ELO: ${details.eloRating}</div>
         <div class="som-tooltip-estimate">Estimated ${estimatedVotes} votes at payout</div>
       </div>
       <div class="som-tooltip-arrow"></div>
