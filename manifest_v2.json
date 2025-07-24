@@ -4,9 +4,7 @@
   "version": "1.0",
   "description": "Firefox extension for useful stats on Hack Club's Summer of Making",
   "permissions": [
-    "activeTab"
-  ],
-  "host_permissions": [
+    "activeTab",
     "https://summer.hackclub.com/*",
     "https://lb.summer.hackclub.com/*",
     "https://explorpheus.hackclub.com/*"
