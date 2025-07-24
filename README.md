@@ -31,7 +31,7 @@ Compatible with both Chrome, Firefox and Safari!
 4. Select the `manifest_v2.json` file
 
 ### Safari
-1. Click the green code button on this page and click `Download ZIP`
+1. Click the releases on here and get firefox release
 2. Unzip what you just downloaded
 3. Open Safari and do `CMD + ,`
 4. Go to settings and check the checkbox saying `Show features for web developers`
