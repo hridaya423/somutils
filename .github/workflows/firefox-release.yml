@@ -1,0 +1,55 @@
+name: Firefox Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 'lts/*'
+    
+    - name: Create Firefox extension package
+      run: |
+        # Create a temporary directory for the extension files
+        mkdir -p temp-firefox-extension
+        
+        # Copy all necessary files
+        # For Firefox, we use manifest_v2.json but rename it to manifest.json
+        cp manifest_v2.json temp-firefox-extension/manifest.json
+        cp background.js temp-firefox-extension/
+        cp content.js temp-firefox-extension/
+        cp styles.css temp-firefox-extension/
+        cp icon16.png temp-firefox-extension/
+        cp icon48.png temp-firefox-extension/
+        cp icon128.png temp-firefox-extension/
+        cp PrivacyPolicy.md temp-firefox-extension/
+        
+        # Create the ZIP file
+        cd temp-firefox-extension
+        zip -r ../firefox-extension.zip .
+        
+        # Go back to the root directory
+        cd ..
+        
+        # Clean up the temporary directory
+        rm -rf temp-firefox-extension
+    
+    - name: Upload Firefox extension artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: firefox-extension
+        path: firefox-extension.zip
+        retention-days: 30

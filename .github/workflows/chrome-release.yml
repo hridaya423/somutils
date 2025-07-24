@@ -1,0 +1,54 @@
+name: Chrome Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 'lts/*'
+    
+    - name: Create Chrome extension package
+      run: |
+        # Create a temporary directory for the extension files
+        mkdir -p temp-chrome-extension
+        
+        # Copy all necessary files
+        cp manifest.json temp-chrome-extension/
+        cp background.js temp-chrome-extension/
+        cp content.js temp-chrome-extension/
+        cp styles.css temp-chrome-extension/
+        cp icon16.png temp-chrome-extension/
+        cp icon48.png temp-chrome-extension/
+        cp icon128.png temp-chrome-extension/
+        cp PrivacyPolicy.md temp-chrome-extension/
+        
+        # Create the ZIP file
+        cd temp-chrome-extension
+        zip -r ../chrome-extension.zip .
+        
+        # Go back to the root directory
+        cd ..
+        
+        # Clean up the temporary directory
+        rm -rf temp-chrome-extension
+    
+    - name: Upload Chrome extension artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: chrome-extension
+        path: chrome-extension.zip
+        retention-days: 30

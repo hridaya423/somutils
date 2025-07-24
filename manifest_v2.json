@@ -12,7 +12,8 @@
     "https://explorpheus.hackclub.com/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "scripts": ["background.js"],
+    "persistent": false
   },
   "content_scripts": [
     {
