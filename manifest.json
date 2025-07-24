@@ -3,9 +3,17 @@
   "name": "SOM Utils",
   "version": "1.0",
   "description": "Chrome extension for useful stats on Hack Club's Summer of Making",
-  "host_permissions": [
-    "https://summer.hackclub.com/*"
+  "permissions": [
+    "activeTab"
   ],
+  "host_permissions": [
+    "https://summer.hackclub.com/*",
+    "https://lb.summer.hackclub.com/*",
+    "https://explorpheus.hackclub.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": ["https://summer.hackclub.com/*"],

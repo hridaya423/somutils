@@ -6,6 +6,9 @@ Compatible with both Chrome, Firefox and Safari!
 
 ## Features
 
+- **Vote Estimation**: Estimates how many votes your projects received based on shells and hours
+- **Leaderboard Rank**: Shows your current rank and economy percentage next to shell count
+- **Multi-Quantity Goals**: Add multiple quantities (1-99x) of shop items to goals with progress tracking
 - **Shells/Hour Display**: Shows efficiency metrics on project cards with smart badges
 - **Sorting**: Sort projects by:
   - Most/Least Hours worked

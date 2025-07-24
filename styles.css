@@ -1392,3 +1392,317 @@ input[type="file"][data-som-enhanced]:hover {
   }
 }
 
+.som-rank {
+  font-size: 1rem;
+  color: #8B7355;
+  font-weight: 500;
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  animation: som-fade-in 0.4s ease-out;
+}
+
+.som-percentage {
+  color: #8B7355;
+  font-weight: 500;
+  opacity: 0.8;
+  font-size: 0.69em;
+  margin-left: 4px;
+}
+
+@media (max-width: 768px) {
+  .som-rank {
+    font-size: 0.7rem;
+  }
+  
+  .som-percentage {
+    font-size: 0.85em;
+  }
+}
+
+.som-goal-button-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.som-goal-quantity-selector {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(246, 239, 229, 0.8);
+  border: 1px solid rgba(230, 212, 190, 0.5);
+  border-radius: 6px;
+  padding: 2px;
+  pointer-events: auto;
+  z-index: 15;
+}
+
+.som-quantity-btn {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(230, 212, 190, 0.6);
+  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #8B7355;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  pointer-events: auto;
+  user-select: none;
+}
+
+.som-quantity-btn:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(139, 115, 85, 0.8);
+  color: #6B5B47;
+}
+
+.som-quantity-btn:active {
+  transform: scale(0.95);
+  background: rgba(246, 239, 229, 0.9);
+}
+
+.som-quantity-input {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6B5B47;
+  width: 30px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(230, 212, 190, 0.6);
+  border-radius: 3px;
+  padding: 2px 4px;
+  pointer-events: auto;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.som-quantity-input::-webkit-outer-spin-button,
+.som-quantity-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.som-quantity-input:focus {
+  border-color: rgba(139, 115, 85, 0.8);
+  background: rgba(255, 255, 255, 1);
+}
+
+.som-quantity-display {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6B5B47;
+  min-width: 20px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 3px;
+  padding: 2px 4px;
+  pointer-events: auto;
+}
+
+.som-goal-quantity {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #059669;
+  background: rgba(5, 150, 105, 0.1);
+  padding: 2px 4px;
+  border-radius: 3px;
+  margin-left: 4px;
+}
+
+.som-goal-quantity-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #059669;
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 2px 4px;
+  border-radius: 8px;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  z-index: 20;
+  pointer-events: none;
+  transform-origin: center;
+}
+
+.som-utils-vote-estimate {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 0.5rem;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  animation: som-fade-in 0.4s ease-out;
+  transition: all 0.2s ease;
+}
+
+.som-confidence-high {
+  background: linear-gradient(90deg, rgba(5, 150, 105, 0.08) 0%, rgba(16, 185, 129, 0.05) 100%);
+  border: 1px solid rgba(5, 150, 105, 0.2);
+  color: #059669;
+}
+
+.som-confidence-medium {
+  background: linear-gradient(90deg, rgba(217, 119, 6, 0.08) 0%, rgba(245, 158, 11, 0.05) 100%);
+  border: 1px solid rgba(217, 119, 6, 0.2);
+  color: #d97706;
+}
+
+.som-confidence-low {
+  background: linear-gradient(90deg, rgba(107, 114, 128, 0.08) 0%, rgba(156, 163, 175, 0.05) 100%);
+  border: 1px solid rgba(107, 114, 128, 0.2);
+  color: #6b7280;
+}
+
+.som-vote-icon {
+  font-size: 0.8rem;
+  opacity: 0.9;
+}
+
+.som-vote-count {
+  font-weight: 600;
+  letter-spacing: 0.025em;
+}
+
+.som-vote-performance {
+  font-size: 0.65rem;
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+.som-utils-vote-estimate {
+  position: relative;
+}
+
+.som-utils-vote-estimate:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.som-vote-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) scale(0.8);
+  transform-origin: center bottom;
+  margin-bottom: 8px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 1000;
+}
+
+.som-utils-vote-estimate:hover .som-vote-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(-4px) scale(1);
+}
+
+.som-tooltip-content {
+  background: rgba(246, 219, 186, 0.95);
+  backdrop-filter: blur(12px);
+  color: #3D2914;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  box-shadow: 
+    0 8px 32px rgba(74, 45, 36, 0.2),
+    0 4px 16px rgba(139, 115, 85, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border: 1.5px solid rgba(246, 219, 186, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.som-tooltip-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.6) 50%, 
+    transparent 100%);
+}
+
+.som-tooltip-performance {
+  font-weight: 700;
+  color: #2D1810;
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+  letter-spacing: 0.025em;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.1);
+}
+
+.som-tooltip-stats {
+  color: #4A2D24;
+  font-size: 0.7rem;
+  margin-bottom: 2px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.som-tooltip-estimate {
+  color: #5D3A2E;
+  font-size: 0.65rem;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.som-tooltip-arrow {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid rgba(246, 219, 186, 0.95);
+  filter: drop-shadow(0 2px 4px rgba(74, 45, 36, 0.1));
+}
+
+@media (max-width: 768px) {
+  .som-utils-vote-estimate {
+    padding: 4px 8px;
+    gap: 4px;
+    font-size: 0.7rem;
+  }
+  
+  .som-vote-icon {
+    font-size: 0.75rem;
+  }
+  
+  .som-vote-performance {
+    font-size: 0.6rem;
+  }
+  
+  .som-tooltip-content {
+    font-size: 0.7rem;
+    padding: 6px 8px;
+  }
+  
+  .som-tooltip-stats,
+  .som-tooltip-estimate {
+    font-size: 0.65rem;
+  }
+}
