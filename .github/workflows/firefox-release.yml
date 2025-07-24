@@ -22,24 +22,37 @@ jobs:
     - name: Get version from manifest
       id: get_version
       run: |
-        VERSION=$(grep '"version"' manifest_v2.json | sed -E 's/.*"version": "([^"]+)".*//')
+        VERSION=$(grep '"version"' manifest_v2.json | sed -E 's/.*"version": "([^"]+)".*/\1/')
         echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+    
+    - name: Check if release exists
+      id: check_release
+      run: |
+        if gh release view "firefox-v${{ env.VERSION }}" >/dev/null 2>&1; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Create Firefox extension package
+      if: steps.check_release.outputs.exists == 'false'
       run: |
         # Create a temporary directory for the extension files
         mkdir -p temp-firefox-extension
         
-        # Copy all necessary files
+        # Copy all necessary files (only if they exist)
         # For Firefox, we use manifest_v2.json but rename it to manifest.json
         cp manifest_v2.json temp-firefox-extension/manifest.json
-        cp background.js temp-firefox-extension/
-        cp content.js temp-firefox-extension/
-        cp styles.css temp-firefox-extension/
-        cp icon16.png temp-firefox-extension/
-        cp icon48.png temp-firefox-extension/
-        cp icon128.png temp-firefox-extension/
-        cp PrivacyPolicy.md temp-firefox-extension/
+        [ -f background.js ] && cp background.js temp-firefox-extension/
+        [ -f content.js ] && cp content.js temp-firefox-extension/
+        [ -f styles.css ] && cp styles.css temp-firefox-extension/
+        [ -f icon16.png ] && cp icon16.png temp-firefox-extension/
+        [ -f icon48.png ] && cp icon48.png temp-firefox-extension/
+        [ -f icon128.png ] && cp icon128.png temp-firefox-extension/
+        [ -f PrivacyPolicy.md ] && cp PrivacyPolicy.md temp-firefox-extension/
         
         # Create the ZIP file with version in filename
         cd temp-firefox-extension
@@ -52,29 +65,19 @@ jobs:
         rm -rf temp-firefox-extension
     
     - name: Upload Firefox extension artifact
+      if: steps.check_release.outputs.exists == 'false'
       uses: actions/upload-artifact@v4
       with:
-        name: firefox-extension
+        name: firefox-extension-${{ env.VERSION }}
         path: firefox-extension-${{ env.VERSION }}.zip
         retention-days: 30
     
     - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
+      if: steps.check_release.outputs.exists == 'false'
+      run: |
+        gh release create "firefox-v${{ env.VERSION }}" \
+          --title "Firefox Extension v${{ env.VERSION }}" \
+          --notes "Automated release for Firefox Extension v${{ env.VERSION }}" \
+          firefox-extension-${{ env.VERSION }}.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: firefox-v${{ env.VERSION }}
-        release_name: Firefox Extension v${{ env.VERSION }}
-        draft: false
-        prerelease: false
-    
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./firefox-extension-${{ env.VERSION }}.zip
-        asset_name: firefox-extension-${{ env.VERSION }}.zip
-        asset_content_type: application/zip
