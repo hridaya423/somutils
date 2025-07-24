@@ -1,4 +1,4 @@
-chrome.runtime.onMessage.addListener((request, sendResponse) => {
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   if (request.action === 'fetchUserRank') {
     fetchUserRank(request.username)
