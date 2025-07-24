@@ -21,6 +21,12 @@ jobs:
       with:
         node-version: 'lts/*'
     
+    - name: Get version from manifest
+      id: get_version
+      run: |
+        VERSION=$(grep '"version"' manifest.json | sed -E 's/.*"version": "([^"]+)".*/\1/')
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+    
     - name: Create Chrome extension package
       run: |
         # Create a temporary directory for the extension files
@@ -36,9 +42,9 @@ jobs:
         cp icon128.png temp-chrome-extension/
         cp PrivacyPolicy.md temp-chrome-extension/
         
-        # Create the ZIP file
+        # Create the ZIP file with version in filename
         cd temp-chrome-extension
-        zip -r ../chrome-extension.zip .
+        zip -r ../chrome-extension-${{ env.VERSION }}.zip .
         
         # Go back to the root directory
         cd ..
@@ -50,5 +56,28 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: chrome-extension
-        path: chrome-extension.zip
+        path: chrome-extension-${{ env.VERSION }}.zip
         retention-days: 30
+    
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: chrome-v${{ env.VERSION }}
+        release_name: Chrome Extension v${{ env.VERSION }}
+        draft: false
+        prerelease: false
+      if: github.event_name == 'release'
+    
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./chrome-extension-${{ env.VERSION }}.zip
+        asset_name: chrome-extension-${{ env.VERSION }}.zip
+        asset_content_type: application/zip
+      if: github.event_name == 'release'

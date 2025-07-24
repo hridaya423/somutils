@@ -21,6 +21,12 @@ jobs:
       with:
         node-version: 'lts/*'
     
+    - name: Get version from manifest
+      id: get_version
+      run: |
+        VERSION=$(grep '"version"' manifest_v2.json | sed -E 's/.*"version": "([^"]+)".*/\1/')
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+    
     - name: Create Firefox extension package
       run: |
         # Create a temporary directory for the extension files
@@ -37,9 +43,9 @@ jobs:
         cp icon128.png temp-firefox-extension/
         cp PrivacyPolicy.md temp-firefox-extension/
         
-        # Create the ZIP file
+        # Create the ZIP file with version in filename
         cd temp-firefox-extension
-        zip -r ../firefox-extension.zip .
+        zip -r ../firefox-extension-${{ env.VERSION }}.zip .
         
         # Go back to the root directory
         cd ..
@@ -51,5 +57,28 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: firefox-extension
-        path: firefox-extension.zip
+        path: firefox-extension-${{ env.VERSION }}.zip
         retention-days: 30
+    
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: firefox-v${{ env.VERSION }}
+        release_name: Firefox Extension v${{ env.VERSION }}
+        draft: false
+        prerelease: false
+      if: github.event_name == 'release'
+    
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./firefox-extension-${{ env.VERSION }}.zip
+        asset_name: firefox-extension-${{ env.VERSION }}.zip
+        asset_content_type: application/zip
+      if: github.event_name == 'release'
