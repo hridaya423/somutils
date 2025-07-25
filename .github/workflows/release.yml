@@ -131,7 +131,6 @@ jobs:
         
         gh release create "v${{ env.VERSION }}" \
           --title "SOM Utils v${{ env.VERSION }} - Chrome & Firefox" \
-          --notes-file release_notes.md \
           som-utils-chrome-v${{ env.VERSION }}.zip \
           som-utils-firefox-v${{ env.VERSION }}.zip
         
