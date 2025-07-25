@@ -134,7 +134,15 @@ function parseTimeString(timeStr) {
 }
 
 function parseShellsString(shellsText) {
-  if (!shellsText || shellsText.includes("To get shells, ship this project!")) {
+  if (!shellsText) {
+    return 0;
+  }
+  
+    if (shellsText.includes("Project is awaiting ship certification!")) {
+      return -1;
+    }
+  
+  if (shellsText.includes("To get shells, ship this project!")) {
     return 0;
   }
   
@@ -513,16 +521,24 @@ function addShellsPerHourToCard(card) {
   
   let timeText = '';
   let shellsText = '';
+  let hasCertificationReview = false;
   
   grayTexts.forEach(p => {
     const text = p.textContent.trim();
-    if (text.match(/\d+h\s+\d+m/)) {
+    if (text.match(/\d+[hm]/)) {
       timeText = text.split('\n')[0];
     }
     if (text.includes('shells') || text.includes('ship this project')) {
       shellsText = text;
     }
+    if (text.includes('Project is awaiting ship certification!')) {
+      hasCertificationReview = true;
+    }
   });
+  
+  if (hasCertificationReview) {
+    shellsText = 'Project is awaiting ship certification!';
+  }
   
   if (!timeText) return;
   
@@ -542,12 +558,20 @@ function addShellsPerHourToCard(card) {
         lastGrayText.parentNode.insertBefore(voteDisplay, lastGrayText.nextSibling);
       }
     }
+  } else if (shells === -1 && hours > 0) {
+    const reviewDisplay = createSubtleText('🔍 Awaiting ship certification', true);
+    const lastGrayText = card.querySelector('p.text-gray-400:last-of-type');
+    if (lastGrayText && lastGrayText.parentNode) {
+      lastGrayText.parentNode.insertBefore(reviewDisplay, lastGrayText.nextSibling);
+    }
   }
   
   let displayElement;
   
   if (hours === 0) {
     displayElement = createSubtleText('⏱️ No time tracked yet');
+  } else if (shells === -1) {
+    displayElement = createSubtleText('🔍 Ship certification review', true);
   } else if (shells === 0) {
     displayElement = createSubtleText('🚀 Ship to earn shells!', true);
   } else if (shellsPerHour >= 10) {
@@ -611,19 +635,26 @@ function extractProjectSortingData(card, index) {
   
   grayTexts.forEach(p => {
     const text = p.textContent.trim();
-    if (text.match(/\d+h\s+\d+m/)) {
+    if (text.match(/\d+[hm]/)) {
       timeText = text.split('\n')[0];
     }
     if (text.includes('shells') || text.includes('ship this project')) {
       shellsText = text;
     }
+    if (text.includes('Project is awaiting ship certification!')) {
+      hasCertificationReview = true;
+    }
   });
+  
+  if (hasCertificationReview) {
+    shellsText = 'Project is awaiting ship certification!';
+  }
   
   if (!timeText) return null;
   
   const hours = parseTimeString(timeText);
   const shells = parseShellsString(shellsText);
-  const efficiency = calculateShellsPerHour(shells, hours);
+  const efficiency = shells === -1 ? -1 : calculateShellsPerHour(shells, hours); 
   
   return {
     index: index,
