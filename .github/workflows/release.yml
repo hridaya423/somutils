@@ -1,0 +1,160 @@
+name: Extension Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 'lts/*'
+    
+    - name: Get version from manifests
+      id: get_version
+      run: |
+        # Get version from Chrome manifest (manifest.json)
+        CHROME_VERSION=$(grep '"version"' manifest.json | sed -E 's/.*"version": "([^"]+)".*/\1/')
+        # Get version from Firefox manifest (manifest_v2.json)
+        FIREFOX_VERSION=$(grep '"version"' manifest_v2.json | sed -E 's/.*"version": "([^"]+)".*/\1/')
+        
+        # Use Chrome version as primary (assuming they should match)
+        VERSION=$CHROME_VERSION
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "CHROME_VERSION=$CHROME_VERSION" >> $GITHUB_ENV
+        echo "FIREFOX_VERSION=$FIREFOX_VERSION" >> $GITHUB_ENV
+        
+        # Warn if versions don't match
+        if [ "$CHROME_VERSION" != "$FIREFOX_VERSION" ]; then
+          echo "⚠️ Warning: Chrome version ($CHROME_VERSION) != Firefox version ($FIREFOX_VERSION)"
+        fi
+    
+    - name: Check if release exists
+      id: check_release
+      run: |
+        if gh release view "v${{ env.VERSION }}" >/dev/null 2>&1; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Build Chrome extension package
+      if: steps.check_release.outputs.exists == 'false'
+      run: |
+        echo "Building Chrome extension..."
+        
+        mkdir -p temp-chrome-extension
+        
+        # Copy files for Chrome (uses manifest.json)
+        cp manifest.json temp-chrome-extension/
+        [ -f background.js ] && cp background.js temp-chrome-extension/
+        [ -f content.js ] && cp content.js temp-chrome-extension/
+        [ -f styles.css ] && cp styles.css temp-chrome-extension/
+        [ -f icon16.png ] && cp icon16.png temp-chrome-extension/
+        [ -f icon48.png ] && cp icon48.png temp-chrome-extension/
+        [ -f icon128.png ] && cp icon128.png temp-chrome-extension/
+        [ -f PrivacyPolicy.md ] && cp PrivacyPolicy.md temp-chrome-extension/
+        
+        # Create Chrome ZIP
+        cd temp-chrome-extension
+        zip -r ../som-utils-chrome-v${{ env.VERSION }}.zip .
+        cd ..
+        
+        # Clean up
+        rm -rf temp-chrome-extension
+        
+        echo "✅ Chrome extension packaged: som-utils-chrome-v${{ env.VERSION }}.zip"
+    
+    - name: Build Firefox extension package
+      if: steps.check_release.outputs.exists == 'false'
+      run: |
+        echo "Building Firefox extension..."
+        
+        # Create temporary directory for Firefox extension
+        mkdir -p temp-firefox-extension
+        
+        # Copy files for Firefox (uses manifest_v2.json renamed to manifest.json)
+        cp manifest_v2.json temp-firefox-extension/manifest.json
+        [ -f background.js ] && cp background.js temp-firefox-extension/
+        [ -f content.js ] && cp content.js temp-firefox-extension/
+        [ -f styles.css ] && cp styles.css temp-firefox-extension/
+        [ -f icon16.png ] && cp icon16.png temp-firefox-extension/
+        [ -f icon48.png ] && cp icon48.png temp-firefox-extension/
+        [ -f icon128.png ] && cp icon128.png temp-firefox-extension/
+        [ -f PrivacyPolicy.md ] && cp PrivacyPolicy.md temp-firefox-extension/
+        
+        # Create Firefox ZIP
+        cd temp-firefox-extension
+        zip -r ../som-utils-firefox-v${{ env.VERSION }}.zip .
+        cd ..
+        
+        # Clean up
+        rm -rf temp-firefox-extension
+        
+        echo "✅ Firefox extension packaged: som-utils-firefox-v${{ env.VERSION }}.zip"
+    
+    - name: Upload Chrome extension artifact
+      if: steps.check_release.outputs.exists == 'false'
+      uses: actions/upload-artifact@v4
+      with:
+        name: som-utils-chrome-v${{ env.VERSION }}
+        path: som-utils-chrome-v${{ env.VERSION }}.zip
+        retention-days: 30
+    
+    - name: Upload Firefox extension artifact
+      if: steps.check_release.outputs.exists == 'false'
+      uses: actions/upload-artifact@v4
+      with:
+        name: som-utils-firefox-v${{ env.VERSION }}
+        path: som-utils-firefox-v${{ env.VERSION }}.zip
+        retention-days: 30
+    
+    - name: Create unified release
+      if: steps.check_release.outputs.exists == 'false'
+      run: |
+        echo "🚀 Creating unified release v${{ env.VERSION }}..."
+        
+        gh release create "v${{ env.VERSION }}" \
+          --title "SOM Utils v${{ env.VERSION }} - Chrome & Firefox" \
+          --notes-file release_notes.md \
+          som-utils-chrome-v${{ env.VERSION }}.zip \
+          som-utils-firefox-v${{ env.VERSION }}.zip
+        
+        echo "✅ Release created successfully!"
+        echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/v${{ env.VERSION }}"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Summary
+      if: steps.check_release.outputs.exists == 'false'
+      run: |
+        echo "## 🎉 Release Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ **Version**: v${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
+        echo "✅ **Chrome Extension**: som-utils-chrome-v${{ env.VERSION }}.zip" >> $GITHUB_STEP_SUMMARY
+        echo "✅ **Firefox Extension**: som-utils-firefox-v${{ env.VERSION }}.zip" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🔗 **Release URL**: https://github.com/${{ github.repository }}/releases/tag/v${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Skip notification
+      if: steps.check_release.outputs.exists == 'true'
+      run: |
+        echo "ℹ️ Release v${{ env.VERSION }} already exists. Skipping build and release."
+        echo "## ℹ️ Skipped Release" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Release v${{ env.VERSION }} already exists." >> $GITHUB_STEP_SUMMARY

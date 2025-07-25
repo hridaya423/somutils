@@ -4,7 +4,7 @@ class VoteEstimationService {
   static MULTIPLIER_SCALE = 10;
   static MAX_MULTIPLIER = 30;
   static MIN_MULTIPLIER = 1;
-  static BASE_RATING = 1000;
+  static BASE_RATING = 1100;
   
   static estimateVotes(shells, hours) {
     if (!shells || !hours || shells <= 0 || hours <= 0) {
@@ -18,11 +18,16 @@ class VoteEstimationService {
     try {
       const baseShells = hours * 1
       const multiplier = shells / baseShells;
+      const percentile = this.getPercentileFromMultiplier(multiplier);
       const normalizedRating = this.reverseMultiplier(multiplier);
       const eloRating = this.denormalizeRating(normalizedRating);
-      const voteCount = this.estimateVoteCount(eloRating);
+      const voteCount = this.estimateVoteCount(multiplier, percentile);
       
       const confidence = this.calculateConfidence(multiplier, voteCount);
+      
+      const topPercentage = (100 - percentile * 100).toFixed(1);
+      
+      const adjustedPercentile = 0.1 + (percentile * 0.8);
       
       return {
         estimatedVotes: Math.max(0, Math.round(voteCount)),
@@ -31,7 +36,9 @@ class VoteEstimationService {
           baseShells: baseShells.toFixed(1),
           multiplier: multiplier.toFixed(2),
           eloRating: Math.round(eloRating),
-          normalizedRating: normalizedRating.toFixed(3)
+          normalizedRating: normalizedRating.toFixed(3),
+          percentile: (percentile * 100).toFixed(1) + '%',
+          topPercentage: 'Top ' + topPercentage + '%'
         }
       };
     } catch (error) {
@@ -44,24 +51,63 @@ class VoteEstimationService {
     }
   }
   
+  static calculateMultiplier(x) {
+    const t = 0.5;
+    const a = 10.0;
+    const n = 1.0;
+    const m = 30.0;
+    
+    const exp = Math.log((a - n) / (m - n)) / Math.log(t);
+    const term1 = 2.0 * x - 1.0;
+    const term2 = Math.sqrt(2.0 * (1.0 - (term1 * term1) / 2.0));
+    const normalized = (term1 * term2 + 1.0) / 2.0;
+    
+    return n + Math.pow(normalized, exp) * (m - n);
+  }
+  
+  static getPercentileFromMultiplier(multiplier) {
+    const clampedMultiplier = Math.max(1.0, Math.min(30.0, multiplier));
+    
+    let low = 0.0;
+    let high = 1.0;
+    let mid, calculatedMultiplier;
+    
+    for (let i = 0; i < 50; i++) {
+      mid = (low + high) / 2.0;
+      calculatedMultiplier = this.calculateMultiplier(mid);
+      
+      if (Math.abs(calculatedMultiplier - clampedMultiplier) < 0.001) {
+        break;
+      }
+      
+      if (calculatedMultiplier < clampedMultiplier) {
+        low = mid;
+      } else {
+        high = mid;
+      }
+    }
+    
+    return mid;
+  }
+  
   static reverseMultiplier(multiplier) {
-    const clampedMultiplier = Math.max(this.MIN_MULTIPLIER, Math.min(this.MAX_MULTIPLIER, multiplier));
-    const normalizedRating = (clampedMultiplier - this.BASE_MULTIPLIER) / this.MULTIPLIER_SCALE;
-    return Math.max(-1, Math.min(1, normalizedRating));
+    const percentile = this.getPercentileFromMultiplier(multiplier);
+    return Math.max(-1, Math.min(1, (percentile - 0.5) * 2));
   }
   
   
   static denormalizeRating(normalizedRating) {
-    const RATING_RANGE = 200;
+    const RATING_RANGE = 300;
     return this.BASE_RATING + (normalizedRating * RATING_RANGE);
   }
   
   
-  static estimateVoteCount(eloRating) {
-    const ratingChange = eloRating - this.BASE_RATING;
-    const avgChangePerVote = this.K_FACTOR / 2;
-    const estimatedVotes = Math.abs(ratingChange) / avgChangePerVote;
-    return Math.min(18, estimatedVotes);
+  static estimateVoteCount(multiplier, percentile) {
+    const adjustedPercentile = 0.1 + (percentile * 0.8);
+    
+    const votesWon = Math.round(adjustedPercentile * 18);
+    
+    return Math.max(1, Math.min(17, votesWon));
   }
   
   
@@ -413,6 +459,7 @@ function createVoteEstimateDisplay(estimatedVotes, confidence, details = null) {
   voteDisplay.className = `som-utils-vote-estimate som-confidence-${confidence}`;
   
   const multiplier = parseFloat(details?.multiplier || 0);
+  const topPercentage = details?.topPercentage || 'Unknown %';
   
   let performanceIcon = '🗳️';
   let performanceText = '';
@@ -422,22 +469,22 @@ function createVoteEstimateDisplay(estimatedVotes, confidence, details = null) {
   if (multiplier >= 23) {
     performanceIcon = '🔥';
     performanceText = 'Excellent';
-    tooltipText = `Excellent performance! ${multiplier}x shells/hour (vs 10x average). Estimated ${estimatedVotes} votes at payout.`;
+    tooltipText = `Excellent performance! ${multiplier}x shells/hour. Estimated ${estimatedVotes} votes won. Estimated ELO:: ${details.eloRating}.`;
   } else if (multiplier >= 13) {
     performanceIcon = '⭐';
     performanceText = 'Good';
-    tooltipText = `Good performance! ${multiplier}x shells/hour (vs 10x average). Estimated ${estimatedVotes} votes at payout.`;
+    tooltipText = `Good performance! ${multiplier}x shells/hour. Estimated ${estimatedVotes} votes won. Estimated ELO:: ${details.eloRating}.`;
   } else if (multiplier >= 10) {
     performanceIcon = '✅';
     performanceText = 'Average';
-    tooltipText = `Average performance. ${multiplier}x shells/hour (10x is average). Estimated ${estimatedVotes} votes at payout.`;
+    tooltipText = `Average performance. ${multiplier}x shells/hour. Estimated ${estimatedVotes} votes won. Estimated ELO:: ${details.eloRating}.`;
   } else {
     performanceIcon = '📉';
     performanceText = 'Below Avg';
-    tooltipText = `Below average performance. ${multiplier}x shells/hour (vs 10x average). Estimated ${estimatedVotes} votes at payout.`;
+    tooltipText = `Below average performance. ${multiplier}x shells/hour. Estimated ${estimatedVotes} votes won. Estimated ELO:: ${details.eloRating}.`;
   }
   
-  voteDisplay.setAttribute('aria-label', `Estimated ${estimatedVotes} votes. ${tooltipText}`);
+  voteDisplay.setAttribute('aria-label', `Estimated ${estimatedVotes} votes won. ${tooltipText}`);
   
   voteDisplay.innerHTML = `
     <span class="som-vote-icon">${performanceIcon}</span>
@@ -445,10 +492,10 @@ function createVoteEstimateDisplay(estimatedVotes, confidence, details = null) {
     <span class="som-vote-performance">(${performanceText})</span>
     <div class="som-vote-tooltip">
       <div class="som-tooltip-content">
-        <div class="som-tooltip-performance">${performanceText} Performance</div>
-        <div class="som-tooltip-stats">${multiplier}x shells/hour (vs 10x avg)</div>
-        <div class="som-tooltip-elo">ELO: ${details.eloRating}</div>
-        <div class="som-tooltip-estimate">Estimated ${estimatedVotes} votes at payout</div>
+        <div class="som-tooltip-performance">${performanceText} Performance - ${topPercentage}</div>
+        <div class="som-tooltip-stats">${multiplier}x shells/hour</div>
+        <div class="som-tooltip-elo">Estimated ELO:: ${details.eloRating}</div>
+        <div class="som-tooltip-estimate">Estimated ${estimatedVotes} votes won</div>
       </div>
       <div class="som-tooltip-arrow"></div>
     </div>
