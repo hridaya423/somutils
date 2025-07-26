@@ -512,7 +512,6 @@ function createVoteEstimateDisplay(estimatedVotes, confidence, details = null) {
   return voteDisplay;
 }
 
-let hasCertificationReview = false;
 function addShellsPerHourToCard(card) {
   if (card.querySelector('[class*="som-utils"]')) {
     return;
@@ -522,8 +521,13 @@ function addShellsPerHourToCard(card) {
   
   let timeText = '';
   let shellsText = '';
+  let hasCertificationReview = false;
   
   grayTexts.forEach(p => {
+    if (p.classList.contains('som-utils-subtle-text')) {
+      return;
+    }
+    
     const text = p.textContent.trim();
     if (text.match(/\d+[hm]/)) {
       timeText = text.split('\n')[0];
@@ -558,7 +562,7 @@ function addShellsPerHourToCard(card) {
         lastGrayText.parentNode.insertBefore(voteDisplay, lastGrayText.nextSibling);
       }
     }
-  } else if (shells === -1 && hours > 0) {
+  } else if (shells === -1 && hours > 0 && hasCertificationReview) {
     const reviewDisplay = createSubtleText('🔍 Awaiting ship certification', true);
     const lastGrayText = card.querySelector('p.text-gray-400:last-of-type');
     if (lastGrayText && lastGrayText.parentNode) {
@@ -570,7 +574,7 @@ function addShellsPerHourToCard(card) {
   
   if (hours === 0) {
     displayElement = createSubtleText('⏱️ No time tracked yet');
-  } else if (shells === -1) {
+  } else if (shells === -1 && hasCertificationReview) {
     displayElement = createSubtleText('🔍 Ship certification review', true);
   } else if (shells === 0) {
     displayElement = createSubtleText('🚀 Ship to earn shells!', true);
@@ -627,6 +631,7 @@ function extractProjectSortingData(card, index) {
   let timeText = '';
   let shellsText = '';
   let title = '';
+  let hasCertificationReview = false;
   
   const titleElement = card.querySelector('h2, h3, .font-bold, [class*="text-lg"]') || card.querySelector('p:not(.text-gray-400)');
   if (titleElement) {
@@ -634,6 +639,10 @@ function extractProjectSortingData(card, index) {
   }
   
   grayTexts.forEach(p => {
+    if (p.classList.contains('som-utils-subtle-text')) {
+      return;
+    }
+    
     const text = p.textContent.trim();
     if (text.match(/\d+[hm]/)) {
       timeText = text.split('\n')[0];
