@@ -512,6 +512,7 @@ function createVoteEstimateDisplay(estimatedVotes, confidence, details = null) {
   return voteDisplay;
 }
 
+let hasCertificationReview = false;
 function addShellsPerHourToCard(card) {
   if (card.querySelector('[class*="som-utils"]')) {
     return;
@@ -521,7 +522,6 @@ function addShellsPerHourToCard(card) {
   
   let timeText = '';
   let shellsText = '';
-  let hasCertificationReview = false;
   
   grayTexts.forEach(p => {
     const text = p.textContent.trim();
