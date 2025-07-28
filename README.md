@@ -8,6 +8,8 @@ Compatible with both Chrome, Firefox and Safari!
 
 - **Vote Estimation**: Estimates how many votes your projects received based on shells and hours
 - **Leaderboard Rank**: Shows your current rank and economy percentage next to shell count
+- **Devlogs per hour**: Useful stat while you're voting
+- **AI Detection**: Detects potential AI-generated content in devlogs and projects during voting
 - **Multi-Quantity Goals**: Add multiple quantities (1-99x) of shop items to goals with progress tracking
 - **Shells/Hour Display**: Shows efficiency metrics on project cards with smart badges
 - **Sorting**: Sort projects by:
@@ -22,7 +24,18 @@ Compatible with both Chrome, Firefox and Safari!
 
 ## Installation
 
-### [Chrome](https://chromewebstore.google.com/detail/som-utils/jamcebgnbkndmjoekldaeefjifeohpdg)
+### Chrome
+**Option 1: Chrome Web Store**
+1. Visit the [Chrome Web Store](https://chromewebstore.google.com/detail/som-utils/jamcebgnbkndmjoekldaeefjifeohpdg)
+2. Click "Add to Chrome"
+3. Confirm the installation when prompted
+
+**Option 2: Load Unpacked**
+1. Download the extension files from releases
+2. Open Chrome and go to `chrome://extensions/`
+3. Enable "Developer mode" in the top right
+4. Click "Load unpacked"
+5. Select the extension folder
 
 ### Firefox
 1. Open Firefox and go to `about:debugging`
