@@ -1,13 +1,8 @@
 class VoteEstimationService {
-  static K_FACTOR = 32;
-  static BASE_MULTIPLIER = 1.0;
-  static MULTIPLIER_SCALE = 10;
-  static MAX_MULTIPLIER = 30;
-  static MIN_MULTIPLIER = 1;
   static BASE_RATING = 1100;
   
   static estimateVotes(shells, hours) {
-    if (!shells || !hours || shells <= 0 || hours <= 0) {
+  if (!shells || !hours || shells <= 0 || hours <= 0) {
       return {
         estimatedVotes: 0,
         confidence: 'low',
@@ -27,7 +22,6 @@ class VoteEstimationService {
       
       const topPercentage = (100 - percentile * 100).toFixed(1);
       
-      const adjustedPercentile = 0.1 + (percentile * 0.8);
       
       return {
         estimatedVotes: Math.max(0, Math.round(voteCount)),
@@ -512,6 +506,227 @@ function createVoteEstimateDisplay(estimatedVotes, confidence, details = null) {
   return voteDisplay;
 }
 
+
+
+class DevlogAIAnalyzer {
+  static async analyzeDevlogElement(devlogElement) {
+    try {
+      const devlogId = devlogElement.getAttribute('data-viewable-id');
+      
+      let content = '';
+      const readMoreButton = devlogElement.querySelector('button[data-action*="expand"]');
+      
+      if (readMoreButton) {
+        const originalHTML = devlogElement.innerHTML;
+        readMoreButton.click();
+        await new Promise(resolve => setTimeout(resolve, 150));
+        content = devlogElement.querySelector('.prose')?.textContent?.trim() || '';
+        devlogElement.innerHTML = originalHTML;
+      } else {
+        content = devlogElement.querySelector('.prose')?.textContent?.trim() || '';
+      }
+      
+      if (!content) {
+        return null;
+      }
+      
+      try {
+        if (!window.wasmAI.isReady()) {
+          await window.wasmAI.initialize();
+        }
+        
+        if (!window.wasmAI.isReady()) {
+          return null;
+        }
+        
+        let wasmResult;
+        let retryCount = 0;
+        const maxRetries = 2;
+        
+        while (retryCount <= maxRetries) {
+          try {
+            wasmResult = window.wasmAI.predict(content);
+            break; 
+          } catch (wasmError) {
+            retryCount++;
+            if (retryCount > maxRetries) {
+              console.error(`SOM Utils: prediction failed after ${maxRetries} retries for devlog ${devlogId}`);
+              throw wasmError;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 100 * retryCount));
+          }
+        }
+        
+        let aiPercentage = wasmResult.chance_ai;
+        
+        if (typeof aiPercentage !== 'number' || isNaN(aiPercentage)) {
+          aiPercentage = 0;
+        }
+
+        if (aiPercentage <= 1.0) {
+          aiPercentage = aiPercentage * 100;
+        }
+
+        const analysis = {
+          ai_percentage: aiPercentage,
+          raw_response: wasmResult
+        };
+        
+        return analysis;
+      } catch (error) {
+        return null;
+      }
+      
+    } catch (error) {
+      return null;
+    }
+  }
+  
+  
+  static displayDevlogAIBadge(devlogElement, analysis) {
+    try {
+      const devlogId = devlogElement.getAttribute('data-viewable-id');
+      
+      if (devlogElement.querySelector('.som-devlog-ai-badge') || 
+          devlogElement.hasAttribute('data-som-devlog-analyzed')) {
+        return;
+      }
+      
+      const badge = this.createDevlogAIBadge(analysis);
+      
+      if (!badge) {
+        return null;
+      }
+      
+      let header = devlogElement.querySelector('.flex.items-center.justify-between.mb-2.sm\\:mb-3');
+      if (!header) {
+        header = devlogElement.querySelector('.flex.items-center.justify-between');
+      }
+      if (!header) {
+        header = devlogElement.querySelector('.flex.items-center');
+      }
+      
+      if (header) {
+        const badgeContainer = document.createElement('div');
+        badgeContainer.className = 'som-devlog-ai-container';
+        badgeContainer.appendChild(badge);
+        
+        header.appendChild(badgeContainer);
+        devlogElement.setAttribute('data-som-devlog-analyzed', 'true');
+        return badge;
+      } else {
+        return null;
+      }
+      
+    } catch (error) {
+      console.error('SOM Utils: Error displaying badge:', error);
+    }
+  }
+  
+  static createDevlogAIBadge(analysis) {
+    const badge = document.createElement('div');
+    badge.className = 'som-devlog-ai-badge';
+    
+    let aiPercentage = analysis.ai_percentage;
+    if (typeof aiPercentage !== 'number' || isNaN(aiPercentage) || aiPercentage < 0 || aiPercentage > 100) {
+      aiPercentage = 0;
+    }
+    aiPercentage = Math.round(aiPercentage);
+    
+    if (aiPercentage > 50) {
+      badge.classList.add('som-ai-alert');
+    }
+    
+    function formatMetricName(key) {
+      return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    const response = analysis.raw_response || {};
+    
+    const metricsData = response.metrics || {};
+    const responseHTML = Object.entries(metricsData)
+      .filter(([subKey, subValue]) => subKey !== subValue)
+      .map(([subKey, subValue]) => {
+        let formattedValue = subValue;
+        if (typeof subValue === 'number') {
+          formattedValue = subValue % 1 === 0 ? subValue.toString() : subValue.toFixed(3);
+        }
+        return `<div class="som-tooltip-detail">• ${formatMetricName(subKey)}: ${formattedValue}</div>`;
+      })
+      .join('');
+    
+    const alertIcon = aiPercentage > 50 ? '⚠️ ' : '';
+    
+    badge.innerHTML = `
+      <span class="som-devlog-ai-percentage">${alertIcon}${aiPercentage}%</span>
+      <div class="som-vote-tooltip">
+        <div class="som-tooltip-content">
+          <div class="som-tooltip-stats">AI Detection: ${aiPercentage}%</div>
+          ${responseHTML ? `<div class="som-tooltip-evidence">Metrics:</div>${responseHTML}` : '<div class="som-tooltip-evidence">No additional data available</div>'}
+        </div>
+        <div class="som-tooltip-arrow"></div>
+      </div>
+    `;
+    
+    badge.setAttribute('aria-label', `AI Detection: ${aiPercentage}%`);
+    
+    return badge;
+  }
+}
+
+class VotingProjectAnalyzer {
+  static async processDualProjects() {
+    const project0 = document.querySelector('[data-project-index="0"]');
+    const project1 = document.querySelector('[data-project-index="1"]');
+    
+    if (project0 && project1) {
+      
+      const promises = [
+        this.analyzeProjectDevlogs(project0),
+        this.analyzeProjectDevlogs(project1)
+      ];
+      
+      await Promise.all(promises);
+    }
+  }
+  
+  static async analyzeProjectDevlogs(projectElement) {
+    try {
+      const devlogElements = projectElement.querySelectorAll('[data-viewable-type="Devlog"]');
+      
+      if (devlogElements.length === 0) {
+        return;
+      }
+      
+      for (const devlogElement of devlogElements) {
+        try {
+          const devlogId = devlogElement.getAttribute('data-viewable-id');
+          
+          if (devlogElement.hasAttribute('data-som-devlog-analyzed')) {
+            continue;
+          }
+          
+          const analysis = await DevlogAIAnalyzer.analyzeDevlogElement(devlogElement);
+          
+          if (analysis) {
+            const badge = DevlogAIAnalyzer.displayDevlogAIBadge(devlogElement, analysis);
+           
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+        } catch (error) {
+          console.error('SOM Utils: Error analyzing individual devlog:', error);
+        }
+      }
+           
+    } catch (error) {
+      console.error('SOM Utils: Error in analyzeProjectDevlogs:', error);
+    }
+  }
+}
+
 function addShellsPerHourToCard(card) {
   if (card.querySelector('[class*="som-utils"]')) {
     return;
@@ -862,51 +1077,6 @@ function addProjectSortInterface(projectCards, projectData) {
   
 }
 
-function parseShipEventData(shipElement) {
-  const payoutText = shipElement.textContent;
-  const shellsMatch = payoutText.match(/(\d+(?:\.\d+)?)\s*shells/);
-  const shells = shellsMatch ? parseFloat(shellsMatch[1]) : 0;
-  
-  let timeElement = shipElement.parentElement?.querySelector('time');
-  if (!timeElement) {
-    timeElement = shipElement.closest('div')?.querySelector('time');
-  }
-  if (!timeElement) {
-    const containerText = shipElement.closest('div')?.textContent || '';
-    const timeMatch = containerText.match(/(\d+h\s+\d+m)/);
-    if (timeMatch) {
-      const hours = parseTimeString(timeMatch[1]);
-      return { shells, hours };
-    }
-    return null;
-  }
-  
-  const timeText = timeElement.textContent.trim();
-  const hours = parseTimeString(timeText);
-  
-  return { shells, hours };
-}
-
-function addShellsPerHourToShipEvent(shipElement) {
-  if (shipElement.querySelector('[class*="som-utils"]')) {
-    return;
-  }
-  
-  const shipData = parseShipEventData(shipElement);
-  if (!shipData || shipData.hours === 0) return;
-  
-  const shellsPerHour = calculateShellsPerHour(shipData.shells, shipData.hours);
-  if (shellsPerHour <= 0) return;
-  
-  const metric = document.createElement('span');
-  metric.className = 'som-utils-ship-metric';
-  metric.innerHTML = `<span class="som-ship-efficiency">${shellsPerHour.toFixed(1)}/hr</span>`;
-  
-  const targetElement = shipElement.querySelector('span');
-  if (targetElement) {
-    targetElement.appendChild(metric);
-  }
-}
 
 function calculateProjectTotalEfficiency() {
   const shipElements = document.querySelectorAll('p');
@@ -1940,7 +2110,6 @@ function addFilePasteSupport() {
         showNotification('Failed to process pasted files', true);
       }
     } catch (error) {
-      console.error('SOM Utils: Error pasting files:', error);
       showNotification('Error pasting files', true);
     }
   });
@@ -2018,21 +2187,43 @@ function addFilePasteSupport() {
   
 }
 
+let lastProcessTime = 0;
+let isProcessing = false;
 
 function processCurrentPage() {
   const currentPath = window.location.pathname;
+  const now = Date.now();
   
+  if (now - lastProcessTime < 1000 || isProcessing) {
+    return;
+  }
   
-  addFilePasteSupport();
+  lastProcessTime = now;
+  isProcessing = true;
   
-  displayUserRank();
-  
-  if (currentPath.startsWith('/projects/') && currentPath.match(/\/projects\/\d+/)) {
-    processProjectPage();
-  } else if (currentPath === '/shop') {
-    processShopPage();
-  } else {
-    processProjectCards();
+  try {
+    addFilePasteSupport();
+    
+    displayUserRank();
+    
+    if (currentPath === '/votes/new') {
+      const project0 = document.querySelector('[data-project-index="0"]');
+      const project1 = document.querySelector('[data-project-index="1"]');
+      
+      if (project0 && project1) {
+        VotingProjectAnalyzer.processDualProjects().catch(error => {
+          console.error('SOM Utils: Error processing both projects:', error);
+        });
+      }
+    } else if (currentPath.startsWith('/projects/') && currentPath.match(/\/projects\/\d+/)) {
+      processProjectPage();
+    } else if (currentPath === '/shop') {
+      processShopPage();
+    } else {
+      processProjectCards();
+    }
+  } finally {
+    isProcessing = false;
   }
 }
 

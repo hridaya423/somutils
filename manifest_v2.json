@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "SOM Utils",
-  "version": "1.1",
+  "version": "1.2",
   "description": "Firefox extension for useful stats on Hack Club's Summer of Making",
   "permissions": [
     "activeTab",
@@ -16,9 +16,12 @@
   "content_scripts": [
     {
       "matches": ["https://summer.hackclub.com/*"],
-      "js": ["content.js"],
+      "js": ["wasm-data-url.js", "content.js"],
       "css": ["styles.css"]
     }
+  ],
+  "web_accessible_resources": [
+    "wasm_base64.txt"
   ],
   "icons": {
     "16": "icon16.png",
