@@ -69,6 +69,8 @@ jobs:
         [ -f icon48.png ] && cp icon48.png temp-chrome-extension/
         [ -f icon128.png ] && cp icon128.png temp-chrome-extension/
         [ -f PrivacyPolicy.md ] && cp PrivacyPolicy.md temp-chrome-extension/
+        [ -f wasm-data-url.js ] && cp wasm-data-url.js temp-chrome-extension/
+        [ -f wasm_base64.txt ] && cp wasm_base64.txt temp-chrome-extension/
         
         # Create Chrome ZIP
         cd temp-chrome-extension
@@ -97,6 +99,8 @@ jobs:
         [ -f icon48.png ] && cp icon48.png temp-firefox-extension/
         [ -f icon128.png ] && cp icon128.png temp-firefox-extension/
         [ -f PrivacyPolicy.md ] && cp PrivacyPolicy.md temp-firefox-extension/
+        [ -f wasm-data-url.js ] && cp wasm-data-url.js temp-firefox-extension/
+        [ -f wasm_base64.txt ] && cp wasm_base64.txt temp-firefox-extension/
         
         # Create Firefox ZIP
         cd temp-firefox-extension
