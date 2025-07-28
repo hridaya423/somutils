@@ -1581,7 +1581,7 @@ input[type="file"][data-som-enhanced]:hover {
   visibility: hidden;
   pointer-events: none;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  z-index: 1000;
+  z-index: 1001;
   max-width: 1200px !important;
 }
 
@@ -1792,6 +1792,138 @@ input[type="file"][data-som-enhanced]:hover {
   
   .som-devlog-ai-percentage {
     font-size: 0.6rem;
+  }
+}
+
+.som-project-ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(139, 115, 85, 0.3);
+  border-radius: 16px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #8B7355;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin: 8px 0;
+  z-index: 10;
+}
+
+.som-project-ai-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.som-project-ai-badge:hover .som-vote-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(-4px) scale(1);
+  max-width: min(1200px, 90vw) !important;
+  z-index: 1001 !important;
+}
+
+.som-project-ai-badge.som-ai-alert {
+  background: rgba(255, 77, 77, 0.9);
+  border: 1px solid rgba(255, 77, 77, 0.5);
+  color: white;
+  animation: pulse-alert 2s infinite;
+}
+
+.som-project-ai-badge.som-ai-alert:hover {
+  background: rgba(255, 77, 77, 0.95);
+  box-shadow: 0 3px 10px rgba(255, 77, 77, 0.3);
+}
+
+.som-project-ai-percentage {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .som-project-ai-badge {
+    padding: 3px 6px;
+    gap: 3px;
+    font-size: 0.7rem;
+    margin: 6px 0;
+  }
+  
+  .som-project-ai-percentage {
+    font-size: 0.7rem;
+  }
+}
+
+.som-title-badge-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 1px;
+}
+
+.som-title-badge-wrapper h3 {
+  margin: 0 !important;
+}
+
+.som-project-ai-badge .som-vote-tooltip {
+  transform: translateX(-50%) scale(0.72);
+}
+
+.som-project-ai-badge:hover .som-vote-tooltip {
+  transform: translateX(-50%) translateY(-4px) scale(0.9) !important;
+}
+
+.som-devlogs-per-hour-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(139, 115, 85, 0.3);
+  border-radius: 16px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #8B7355;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin: 0;
+}
+
+.som-devlogs-per-hour-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.som-devlogs-per-hour-badge:hover .som-vote-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(-4px) scale(1);
+  max-width: min(1200px, 90vw) !important;
+}
+
+.som-devlogs-rate {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .som-devlogs-per-hour-badge {
+    padding: 3px 6px;
+    gap: 3px;
+    font-size: 0.7rem;
+  }
+  
+  .som-devlogs-rate {
+    font-size: 0.7rem;
   }
 }
 
