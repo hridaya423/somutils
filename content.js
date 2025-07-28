@@ -758,13 +758,13 @@ class ProjectAIAnalyzer {
       
       const statsText = statsElement.textContent;
       const devlogMatch = statsText.match(/(\d+)\s*devlogs?/);
-      const timeMatch = statsText.match(/(\d+)h\s*(\d+)m/);
+      const timeMatch = statsText.match(/(\d+)h(?:\s*(\d+)m)?/);
       
       if (!devlogMatch || !timeMatch) return null;
       
       const devlogCount = parseInt(devlogMatch[1]);
       const hours = parseInt(timeMatch[1]);
-      const minutes = parseInt(timeMatch[2]);
+      const minutes = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
       const totalHours = hours + (minutes / 60);
       
       if (totalHours === 0) return null;
@@ -1452,7 +1452,7 @@ function calculateProjectTotalEfficiency() {
       const timeSpan = container.querySelector('span.text-som-dark');
       if (timeSpan) {
         const text = timeSpan.textContent.trim();
-        if (text.match(/\d+h\s+\d+m/)) {
+        if (text.match(/\d+h(?:\s+\d+m)?/)) {
           totalHours = parseTimeString(text);
         }
       }
