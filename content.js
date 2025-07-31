@@ -1,3 +1,5 @@
+window.somUtilsProjectionMode = true;
+
 class VoteEstimationService {
   static BASE_RATING = 1100;
   
@@ -156,7 +158,23 @@ function calculateShellsPerHour(shells, hours) {
 
 function saveUserEfficiency(shells, hours) {
   console.log('SOM Utils: Saving efficiency data - Shells:', shells, 'Hours:', hours);
-  const data = JSON.parse(localStorage.getItem('som-utils-efficiency') || '{"projects": []}');
+  
+  let data;
+  try {
+    data = JSON.parse(localStorage.getItem('som-utils-efficiency') || '{"projects": []}');
+  } catch (error) {
+    console.error('SOM Utils: Error parsing existing efficiency data:', error);
+    data = {"projects": []};
+  }
+  
+  const existingProject = data.projects.find(project => 
+    Math.abs(project.shells - shells) < 0.001 && Math.abs(project.hours - hours) < 0.001
+  );
+  
+  if (existingProject) {
+    return;
+  }
+  
   data.projects.push({ shells, hours, timestamp: Date.now() });
   
   if (data.projects.length > 20) {
@@ -167,9 +185,15 @@ function saveUserEfficiency(shells, hours) {
 }
 
 function getUserAverageEfficiency() {
-  const data = JSON.parse(localStorage.getItem('som-utils-efficiency') || '{"projects": []}');
+  let data;
+  try {
+    data = JSON.parse(localStorage.getItem('som-utils-efficiency') || '{"projects": []}');
+  } catch (error) {
+    localStorage.setItem('som-utils-efficiency', '{"projects": []}');
+    return null;
+  }
   
-  if (data.projects.length === 0) return null;
+  if (!data.projects || data.projects.length === 0) return null;
   
   let totalShells = 0;
   let totalHours = 0;
@@ -182,9 +206,10 @@ function getUserAverageEfficiency() {
   return totalHours > 0 ? calculateShellsPerHour(totalShells, totalHours) : null;
 }
 
-function getCurrentUserShells() {
+function getCurrentUserShells(projected = false) {
   const shellImages = document.querySelectorAll('picture.inline-block.w-4.h-4.flex-shrink-0 img[src*="shell"]');
   
+  let currentShells = 0;
   for (const img of shellImages) {
     const picture = img.closest('picture');
     if (picture) {
@@ -195,13 +220,47 @@ function getCurrentUserShells() {
           const shellText = shellSpan.textContent.trim();
           const shellMatch = shellText.match(/(\d+(?:\.\d+)?)/);
           if (shellMatch) {
-            return parseFloat(shellMatch[1]);
+            currentShells = parseFloat(shellMatch[1]);
+            break;
           }
         }
       }
     }
   }
-  return 0;
+  
+  if (!projected) {
+    return currentShells;
+  }
+  
+  let efficiency = getUserAverageEfficiency();
+  if (!efficiency) {
+    efficiency = 10;
+  }
+  
+  const totalHoursData = getTotalHoursData();
+  if (!totalHoursData) {
+    return currentShells;
+  }
+  
+  let efficiencyData;
+  try {
+    efficiencyData = JSON.parse(localStorage.getItem('som-utils-efficiency') || '{"projects": []}');
+  } catch (error) {
+    console.error('SOM Utils: Error parsing efficiency data for projected progress:', error);
+    return currentShells;
+  }
+  
+  let shippedHours = 0;
+  efficiencyData.projects.forEach(project => {
+    shippedHours += project.hours;
+  });
+
+  const unshippedHours = Math.max(0, totalHoursData.totalHours - shippedHours);
+  const estimatedShellsFromUnshipped = unshippedHours * efficiency;
+  
+  const estTotalShells = currentShells + estimatedShellsFromUnshipped;
+  
+  return estTotalShells;
 }
 
 function getCurrentUsername() {
@@ -1166,14 +1225,173 @@ function addShellsPerHourToCard(card) {
   }
 }
 
-function processProjectCards() {
-  const projectCards = document.querySelectorAll('a[href^="/projects/"]');
+function saveTotalHoursData(totalHours) {
+  const currentData = localStorage.getItem('som-utils-total-hours');
+  let existingData = null;
   
+  if (currentData) {
+    try {
+      existingData = JSON.parse(currentData);
+    } catch (error) {
+      console.error('SOM Utils: Error parsing existing total hours data:', error);
+    }
+  }
+  
+  if (existingData && Math.abs(existingData.totalHours - totalHours) < 0.01) {
+    return;
+  }
+  
+  const data = {
+    totalHours: totalHours,
+    timestamp: Date.now(),
+    lastUpdated: new Date().toISOString()
+  };
+  
+  localStorage.setItem('som-utils-total-hours', JSON.stringify(data));
+  console.log('SOM Utils: Saved total hours data:', data);
+}
+
+function getTotalHoursData() {
+  const data = localStorage.getItem('som-utils-total-hours');
+  if (!data) {
+    return { totalHours: 0, timestamp: 0, lastUpdated: null };
+  }
+  
+  try {
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('SOM Utils: Error parsing total hours data:', error);
+    return { totalHours: 0, timestamp: 0, lastUpdated: null };
+  }
+}
+
+function calculateTotalStats(projectData) {
+  let totalHours = 0;
+  let totalDevlogs = 0;
+  let projectsWithData = 0;
+
+  projectData.forEach(project => {
+    if (project.hours > 0) {
+      totalHours += project.hours;
+      projectsWithData++;
+    }
+  });
+
+  const projectCards = document.querySelectorAll('a[href^="/projects/"]');
   const actualProjectCards = Array.from(projectCards).filter(card => {
     const hasCreateText = card.textContent.toLowerCase().includes('create project');
     const hasProjectId = card.href.match(/\/projects\/\d+$/);
     return !hasCreateText && hasProjectId;
   });
+
+  const allProjectCards = document.querySelectorAll('.bg-\\[\\#F3ECD8\\]') || 
+                          document.querySelectorAll('div[class*="rounded-2xl"]');
+  
+  if (allProjectCards.length === 0) {
+    const allDivs = document.querySelectorAll('div');
+    allProjectCards = Array.from(allDivs).filter(div => 
+      div.className.includes('bg-[#F3ECD8]') || 
+      div.className.includes('rounded-2xl')
+    );
+  }
+  
+  allProjectCards.forEach(card => {
+    const grayTexts = card.querySelectorAll('p.text-gray-400');
+    grayTexts.forEach(p => {
+      const text = p.textContent;
+      const devlogMatch = text.match(/(\d+)\s*devlogs?/);
+      if (devlogMatch) {
+        totalDevlogs += parseInt(devlogMatch[1]);
+      }
+    });
+  });
+
+  const roundedTotalHours = Math.round(totalHours * 10) / 10;
+  
+  saveTotalHoursData(roundedTotalHours);
+
+  return {
+    totalHours: roundedTotalHours,
+    totalDevlogs,
+    projectsWithData
+  };
+}
+
+function createTotalStatsBox(stats) {
+  const statsBox = document.createElement('div');
+  statsBox.className = 'som-total-stats-box som-compact-stats';
+  statsBox.innerHTML = `
+    <div class="som-stats-compact">
+      <span class="som-stats-text">Total: ${stats.totalHours}h • ${stats.totalDevlogs} devlogs</span>
+    </div>
+  `;
+  return statsBox;
+}
+
+function addTotalStatsBox(projectData) {
+  if (document.querySelector('.som-total-stats-box')) {
+    return;
+  }
+
+  const stats = calculateTotalStats(projectData);
+  const statsBox = createTotalStatsBox(stats);
+
+  const headerContainer = document.querySelector('div[style*="display: flex"][style*="justify-content: space-between"]');
+  
+  if (headerContainer) {
+    const leftSide = headerContainer.querySelector('div[style*="flex: 1 1 0%"]') || 
+                     headerContainer.querySelector('div:first-child');
+    
+    if (leftSide) {
+      const subtitle = leftSide.querySelector('p');
+      if (subtitle) {
+        leftSide.insertBefore(statsBox, subtitle.nextSibling);
+      } else {
+        leftSide.appendChild(statsBox);
+      }
+    } else {
+      headerContainer.appendChild(statsBox);
+    }
+  } else {
+    const myProjectsTitle = document.querySelector('h1[class*="font-[Dynapuff]"]') ||
+                            document.querySelector('h1');
+    
+    if (myProjectsTitle && myProjectsTitle.parentNode) {
+      const subtitle = myProjectsTitle.parentNode.querySelector('p');
+      if (subtitle) {
+        myProjectsTitle.parentNode.insertBefore(statsBox, subtitle.nextSibling);
+      } else {
+        myProjectsTitle.parentNode.appendChild(statsBox);
+      }
+    }
+  }
+}
+
+function processProjectCards() {
+  let projectCards = document.querySelectorAll('a[href^="/projects/"]');
+  let actualProjectCards = Array.from(projectCards).filter(card => {
+    const hasCreateText = card.textContent.toLowerCase().includes('create project');
+    const hasProjectId = card.href && card.href.match(/\/projects\/\d+$/);
+    return !hasCreateText && hasProjectId;
+  });
+
+  if (actualProjectCards.length === 0) {
+    let divCards = document.querySelectorAll('.bg-\\[\\#F3ECD8\\]') || 
+                   document.querySelectorAll('div[class*="rounded-2xl"]');
+    
+    if (divCards.length === 0) {
+      const allDivs = document.querySelectorAll('div');
+      divCards = Array.from(allDivs).filter(div => 
+        div.className.includes('bg-[#F3ECD8]') || 
+        div.className.includes('rounded-2xl')
+      );
+    }
+    
+    actualProjectCards = Array.from(divCards).filter(card => {
+      const hasCreateText = card.textContent.toLowerCase().includes('create project');
+      return !hasCreateText && card.querySelector('h2, h3');
+    });
+  }
   
   const projectData = [];
   
@@ -1189,6 +1407,10 @@ function processProjectCards() {
   
   if (projectData.length > 1 && window.location.pathname === '/my_projects') {
     addProjectSortInterface(actualProjectCards, projectData);
+  }
+  
+  if (window.location.pathname === '/my_projects' && projectData.length > 0) {
+    addTotalStatsBox(projectData);
   }
 }
 
@@ -1708,29 +1930,34 @@ function isItemInGoals(itemId) {
   return goalsData.goals.some(goal => goal.id === itemId);
 }
 
-function calculateGoalProgress() {
+function calculateGoalProgress(useProjected = true) {
   const goalsData = getGoalsData();
   const currentShells = getCurrentUserShells();
+  const estShells = getCurrentUserShells(true);
+  const activeShells = useProjected ? estShells : currentShells;
   
   if (goalsData.goals.length === 0) {
     return {
       currentShells: currentShells,
+      estShells: estShells,
+      activeShells: activeShells,
       totalNeeded: 0,
       percentage: 100,
       shellsRemaining: 0,
-      goals: []
+      goals: [],
+      useProjected: useProjected
     };
   }
   
   const totalNeeded = goalsData.totalShellsNeeded;
-  const percentage = totalNeeded > 0 ? Math.min(100, (currentShells / totalNeeded) * 100) : 100;
-  const shellsRemaining = Math.max(0, totalNeeded - currentShells);
+  const percentage = totalNeeded > 0 ? Math.min(100, (activeShells / totalNeeded) * 100) : 100;
+  const shellsRemaining = Math.max(0, totalNeeded - activeShells);
   
   const goalsWithProgress = goalsData.goals
     .map(goal => {
       const totalCost = goal.shellCost * goal.quantity;
-      const progress = Math.min(100, (currentShells / totalCost) * 100);
-      const canAfford = currentShells >= totalCost;
+      const progress = Math.min(100, (activeShells / totalCost) * 100);
+      const canAfford = activeShells >= totalCost;
       return {
         ...goal,
         totalCost: totalCost,
@@ -1742,10 +1969,13 @@ function calculateGoalProgress() {
   
   return {
     currentShells: currentShells,
+    estShells: estShells,
+    activeShells: activeShells,
     totalNeeded: totalNeeded,
     percentage: percentage,
     shellsRemaining: shellsRemaining,
-    goals: goalsWithProgress
+    goals: goalsWithProgress,
+    useProjected: useProjected
   };
 }
 
@@ -1880,7 +2110,6 @@ function toggleGoal(itemData, buttonElement, quantity = 1) {
   const isCurrentlyInGoals = isItemInGoals(itemData.id);
   
   if (isCurrentlyInGoals) {
-    
     if (removeGoalItem(itemData.id, quantity)) {
       updateGoalButtonState(buttonElement, itemData, false);
       updateGoalsProgressHeader();
@@ -2207,7 +2436,7 @@ function addGoalButton(card) {
 }
 
 function createGoalsProgressHeader() {
-  const progressData = calculateGoalProgress();
+  const progressData = calculateGoalProgress(window.somUtilsProjectionMode);
   
   if (progressData.goals.length === 0) {
     return null;
@@ -2229,15 +2458,19 @@ function createGoalsProgressHeader() {
       <div class="som-goals-title">
         <h3 class="som-goals-heading">Your Goals Progress</h3>
         <span class="som-goals-count">(${progressData.goals.length})</span>
+        <div class="som-projection-toggle">
+          <button class="som-toggle-btn ${!progressData.useProjected ? 'active' : ''}" data-mode="actual">Actual</button>
+          <button class="som-toggle-btn ${progressData.useProjected ? 'active' : ''}" data-mode="projected">Projected</button>
+        </div>
       </div>
       <div class="som-goals-progress-container">
-        <div class="som-goals-progress-bar" role="progressbar" aria-valuenow="${progressData.currentShells}" aria-valuemin="0" aria-valuemax="${progressData.totalNeeded}" aria-label="Goals progress: ${progressData.currentShells} out of ${progressData.totalNeeded} shells">
-          ${createGoalMarkers(progressData.goals, progressData.totalNeeded, progressData.currentShells)}
+        <div class="som-goals-progress-bar" role="progressbar" aria-valuenow="${progressData.activeShells}" aria-valuemin="0" aria-valuemax="${progressData.totalNeeded}" aria-label="Goals progress: ${progressData.activeShells} out of ${progressData.totalNeeded} shells">
+          ${createGoalMarkers(progressData.goals, progressData.totalNeeded, progressData.activeShells)}
         </div>
         <div class="som-goals-stats">
           <div class="som-goals-stat-item">
-            <span class="som-goals-stat-value">${progressData.currentShells} / ${progressData.totalNeeded}</span>
-            <span class="som-goals-stat-label">shells</span>
+            <span class="som-goals-stat-value">${Math.round(progressData.activeShells)} / ${progressData.totalNeeded}</span>
+            <span class="som-goals-stat-label">shells (${progressData.useProjected ? 'projected' : 'actual'})</span>
           </div>
           <div class="som-goals-stat-item">
             <span class="som-goals-stat-value">${progressData.percentage.toFixed(1)}%</span>
@@ -2254,6 +2487,18 @@ function createGoalsProgressHeader() {
     </div>
   `;
   
+  header.addEventListener('click', (e) => {
+    if (e.target.classList.contains('som-toggle-btn')) {
+      const mode = e.target.dataset.mode;
+      const newProjectedMode = mode === 'projected';
+      
+      if (newProjectedMode !== window.somUtilsProjectionMode) {
+        window.somUtilsProjectionMode = newProjectedMode;
+        updateGoalsProgressHeader();
+      }
+    }
+  });
+  
   return header;
 }
 
@@ -2262,7 +2507,7 @@ function createGoalMarkers(goals, totalShells, currentShells) {
   const maxShellCost = goals.length > 0 ? Math.max(...goals.map(goal => goal.shellCost * goal.quantity)) : 0;
 
   
-  const progressPercentage = maxShellCost > 0 ? Math.min(100, (currentShells / maxShellCost) * 100) : 0;
+  const progressPercentage = totalShells > 0 ? Math.min(100, (currentShells / totalShells) * 100) : 0;
   
   
   const markers = goals.map((goal) => {
