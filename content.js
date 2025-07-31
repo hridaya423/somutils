@@ -1320,9 +1320,19 @@ function calculateTotalStats(projectData) {
 function createTotalStatsBox(stats) {
   const statsBox = document.createElement('div');
   statsBox.className = 'som-total-stats-box som-compact-stats';
+  const hoursPerDevlog = totalHours / devlogCount;
+    let displayText = '';
+    
+    if (hoursPerDevlog < 1) {
+      const minutesPerDevlog = Math.round(hoursPerDevlog * 60);
+      displayText = `1 devlog per ${minutesPerDevlog}m`;
+    } else {
+      const roundedHours = Math.round(hoursPerDevlog * 10) / 10;
+      displayText = `1 devlog per ${roundedHours}h`;
+    }
   statsBox.innerHTML = `
     <div class="som-stats-compact">
-      <span class="som-stats-text">Total: ${stats.totalHours}h • ${stats.totalDevlogs} devlogs</span>
+      <span class="som-stats-text">Total: ${stats.totalHours}h • ${stats.totalDevlogs} devlogs • 1 devlog per ${displayText}</span>
     </div>
   `;
   return statsBox;
