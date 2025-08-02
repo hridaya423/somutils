@@ -38,12 +38,19 @@ Compatible with both Chrome, Firefox and Safari!
 5. Select the extension folder
 
 ### Firefox
+**Option 1: Chrome Web Store**
+1. Visit the [Mozilla Addons](https://addons.mozilla.org/en-US/firefox/addon/som-utils/)
+2. Click "Add to Firefox"
+3. Confirm the installation when prompted
+
+**Option 2: Load Temporarily**
 1. Open Firefox and go to `about:debugging`
 2. Click "This Firefox"
 3. Click "Load Temporary Add-on"
 4. Select the `manifest_v2.json` file
 
 ### Safari
+
 1. Click the releases on here and get firefox release
 2. Unzip what you just downloaded
 3. Open Safari and do `CMD + ,`
