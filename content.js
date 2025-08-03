@@ -726,7 +726,7 @@ class ProjectAIAnalyzer {
       
       let wasmResult;
       let retryCount = 0;
-      const maxRetries = 2;
+      const maxRetries = 10;
       
       while (retryCount <= maxRetries) {
         try {
@@ -780,16 +780,43 @@ class ProjectAIAnalyzer {
     const rawResponse = analysis.raw_response || {};
     
     const metricsData = rawResponse.metrics || {};
-    const responseHTML = Object.entries(metricsData)
+    const allMetrics = Object.entries(metricsData)
       .filter(([subKey, subValue]) => subKey !== subValue)
       .map(([subKey, subValue]) => {
         let formattedValue = subValue;
         if (typeof subValue === 'number') {
           formattedValue = subValue % 1 === 0 ? subValue.toString() : subValue.toFixed(3);
         }
-        return `<div class="som-tooltip-detail">• ${formatMetricName(subKey)}: ${formattedValue}</div>`;
+        return { 
+          key: subKey, 
+          value: formattedValue, 
+          display: `• ${formatMetricName(subKey)}: ${formattedValue}`,
+          isZero: subValue === 0
+        };
       })
-      .join('');
+      .sort((a, b) => {
+        if (a.isZero && !b.isZero) return 1;
+        if (!a.isZero && b.isZero) return -1;
+        return 0;
+      });
+    
+    const visibleMetrics = allMetrics.slice(0, 5);
+    const hiddenMetrics = allMetrics.slice(5);
+    
+    const visibleHTML = visibleMetrics.map(metric => 
+      `<div class="som-tooltip-detail">${metric.display}</div>`
+    ).join('');
+    
+    const hiddenHTML = hiddenMetrics.length > 0 ? 
+      `<div class="som-tooltip-more-container" style="display: none;">
+        ${hiddenMetrics.map(metric => 
+          `<div class="som-tooltip-detail">${metric.display}</div>`
+        ).join('')}
+      </div>
+      <div class="som-tooltip-toggle" onclick="this.parentNode.querySelector('.som-tooltip-more-container').style.display = this.parentNode.querySelector('.som-tooltip-more-container').style.display === 'none' ? 'block' : 'none'; this.textContent = this.textContent === 'Show more...' ? 'Show less' : 'Show more...';" style="font-size: 0.6rem; color: #6B5B47; cursor: pointer; margin-top: 4px; text-decoration: underline;">Show more...</div>` 
+      : '';
+    
+    const responseHTML = visibleHTML + hiddenHTML;
     
     const alertIcon = aiPercentage > 50 ? '⚠️ ' : '';
     
@@ -952,7 +979,7 @@ class DevlogAIAnalyzer {
         
         let wasmResult;
         let retryCount = 0;
-        const maxRetries = 2;
+        const maxRetries = 10;
         
         while (retryCount <= maxRetries) {
           try {
@@ -1056,16 +1083,44 @@ class DevlogAIAnalyzer {
     const response = analysis.raw_response || {};
     
     const metricsData = response.metrics || {};
-    const responseHTML = Object.entries(metricsData)
+    
+    const allMetrics = Object.entries(metricsData)
       .filter(([subKey, subValue]) => subKey !== subValue)
       .map(([subKey, subValue]) => {
         let formattedValue = subValue;
         if (typeof subValue === 'number') {
           formattedValue = subValue % 1 === 0 ? subValue.toString() : subValue.toFixed(3);
         }
-        return `<div class="som-tooltip-detail">• ${formatMetricName(subKey)}: ${formattedValue}</div>`;
+        return { 
+          key: subKey, 
+          value: formattedValue, 
+          display: `• ${formatMetricName(subKey)}: ${formattedValue}`,
+          isZero: subValue === 0
+        };
       })
-      .join('');
+      .sort((a, b) => {
+        if (a.isZero && !b.isZero) return 1;
+        if (!a.isZero && b.isZero) return -1;
+        return 0;
+      });
+    
+    const visibleMetrics = allMetrics.slice(0, 5);
+    const hiddenMetrics = allMetrics.slice(5);
+    
+    const visibleHTML = visibleMetrics.map(metric => 
+      `<div class="som-tooltip-detail">${metric.display}</div>`
+    ).join('');
+    
+    const hiddenHTML = hiddenMetrics.length > 0 ? 
+      `<div class="som-tooltip-more-container" style="display: none;">
+        ${hiddenMetrics.map(metric => 
+          `<div class="som-tooltip-detail">${metric.display}</div>`
+        ).join('')}
+      </div>
+      <div class="som-tooltip-toggle" onclick="this.parentNode.querySelector('.som-tooltip-more-container').style.display = this.parentNode.querySelector('.som-tooltip-more-container').style.display === 'none' ? 'block' : 'none'; this.textContent = this.textContent === 'Show more...' ? 'Show less' : 'Show more...';" style="font-size: 0.6rem; color: #6B5B47; cursor: pointer; margin-top: 4px; text-decoration: underline;">Show more...</div>` 
+      : '';
+    
+    const responseHTML = visibleHTML + hiddenHTML;
     
     const alertIcon = aiPercentage > 50 ? '⚠️ ' : '';
     
@@ -2801,6 +2856,123 @@ function addFilePasteSupport() {
 let lastProcessTime = 0;
 let isProcessing = false;
 
+function clearProjectAnalysisMarkers() {
+  const analyzedProjects = document.querySelectorAll('[data-som-project-analyzed]');
+  analyzedProjects.forEach(project => {
+    project.removeAttribute('data-som-project-analyzed');
+  });
+  
+  const analyzedDevlogs = document.querySelectorAll('[data-som-devlog-analyzed]');
+  analyzedDevlogs.forEach(devlog => {
+    devlog.removeAttribute('data-som-devlog-analyzed');
+  });
+  
+  if (typeof ProjectAIAnalyzer !== 'undefined' && ProjectAIAnalyzer.cache) {
+    ProjectAIAnalyzer.cache.clear();
+  }
+}
+
+function addVoteQualityIndicator() {
+  const voteTextarea = document.querySelector('#vote_explanation');
+  if (!voteTextarea || voteTextarea.hasAttribute('data-som-quality-added')) {
+    return;
+  }
+  
+  voteTextarea.setAttribute('data-som-quality-added', 'true');
+  
+  const indicator = document.createElement('div');
+  indicator.className = 'som-vote-quality-indicator';
+  indicator.style.cssText = `
+    position: absolute;
+    bottom: 12px;
+    right: 16px;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0.8;
+    font-weight: 500;
+  `;
+  
+  voteTextarea.style.position = 'relative';
+  
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = `
+    position: relative;
+    display: inline-block;
+    width: 100%;
+  `;
+  
+  voteTextarea.parentNode.insertBefore(wrapper, voteTextarea);
+  wrapper.appendChild(voteTextarea);
+  wrapper.appendChild(indicator);
+  
+  function updateQualityIndicator() {
+    const length = voteTextarea.value.length;
+    let text, color, bgColor;
+    
+    if (length < 10) {
+      text = length === 0 ? '' : 'slim';
+      color = '#8B7355';
+      bgColor = 'rgba(139, 115, 85, 0.1)';
+    } else if (length < 40) {
+      text = 'getting there';
+      color = '#A0845C';
+      bgColor = 'rgba(160, 132, 92, 0.1)';
+    } else if (length < 60) {
+      text = 'looking good';
+      color = '#6B5B47';
+      bgColor = 'rgba(107, 91, 71, 0.1)';
+    } else {
+      text = 'excellent';
+      color = '#5C4E3A';
+      bgColor = 'rgba(92, 78, 58, 0.15)';
+    }
+    
+    if (length === 0) {
+      indicator.style.display = 'none';
+    } else {
+      indicator.style.display = 'block';
+      indicator.textContent = text ? `${length} • ${text}` : `${length}`;
+      indicator.style.color = color;
+      indicator.style.backgroundColor = bgColor;
+    }
+  }
+  
+  voteTextarea.addEventListener('input', updateQualityIndicator);
+  updateQualityIndicator()
+}
+
+function addVoteSubmissionHandler() {
+  const existingButton = document.querySelector('button[data-som-vote-handler]');
+  if (existingButton) {
+    return;
+  }
+
+  const submitButton = document.querySelector('button[data-form-target="submitButton"]');
+  if (submitButton) {
+    submitButton.setAttribute('data-som-vote-handler', 'true');
+    
+    submitButton.addEventListener('click', () => {
+      setTimeout(() => {
+        clearProjectAnalysisMarkers();
+        const project0 = document.querySelector('[data-project-index="0"]');
+        const project1 = document.querySelector('[data-project-index="1"]');
+        if (project0 && project1) {
+          VotingProjectAnalyzer.processDualProjects().catch(error => {
+            console.error('SOM Utils: Error reprocessing projects after vote:', error);
+          });
+          
+          processProjectAIAnalysis(project0);
+          processProjectAIAnalysis(project1);
+        }
+      }, 800);
+    });
+  }
+}
+
 async function processProjectAIAnalysis(projectElement) {
   try {
     if (projectElement.getAttribute('data-som-project-analyzed')) {
@@ -2845,6 +3017,8 @@ function processCurrentPage() {
         processProjectAIAnalysis(project0);
         processProjectAIAnalysis(project1);
       }
+      addVoteSubmissionHandler();
+      addVoteQualityIndicator();
     } else if (currentPath.startsWith('/projects/') && currentPath.match(/\/projects\/\d+/)) {
       processProjectPage();
     } else if (currentPath === '/shop') {
