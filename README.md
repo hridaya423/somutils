@@ -2,7 +2,7 @@
 
 A browser extension that adds useful features and stats to Summer of Making site.
 
-Compatible with both Chrome, Firefox and Safari!
+Compatible with Chrome, Firefox and Safari!
 
 ## Features
 
