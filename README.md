@@ -59,3 +59,5 @@ Compatible with Chrome, Firefox and Safari!
 6. Check the `Allow unsigned extensions` checkbox at the bottom
 7. Click `Add temporary extension`
 8. Select the folder you downloaded & unzipped earlier
+
+Credits: Eli for the model for detection of AI in devlogs/projects.
