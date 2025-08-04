@@ -2,7 +2,7 @@
 
 A browser extension that adds useful features and stats to Summer of Making site.
 
-Compatible with both Chrome, Firefox and Safari!
+Compatible with Chrome, Firefox and Safari!
 
 ## Features
 
@@ -38,7 +38,7 @@ Compatible with both Chrome, Firefox and Safari!
 5. Select the extension folder
 
 ### Firefox
-**Option 1: Chrome Web Store**
+**Option 1: Mozilla Addons**
 1. Visit the [Mozilla Addons](https://addons.mozilla.org/en-US/firefox/addon/som-utils/)
 2. Click "Add to Firefox"
 3. Confirm the installation when prompted
@@ -59,3 +59,5 @@ Compatible with both Chrome, Firefox and Safari!
 6. Check the `Allow unsigned extensions` checkbox at the bottom
 7. Click `Add temporary extension`
 8. Select the folder you downloaded & unzipped earlier
+
+Credits: Eli for the model for detection of AI in devlogs/projects.
