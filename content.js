@@ -892,8 +892,10 @@ class ProjectAIAnalyzer {
     try {
       const existingAIBadge = projectElement.querySelector('.som-project-ai-badge');
       const existingDevlogsBadge = projectElement.querySelector('.som-devlog-rate-stat');
+      const existingSeparators = projectElement.querySelectorAll('.som-voting-separator');
       if (existingAIBadge) existingAIBadge.remove();
       if (existingDevlogsBadge) existingDevlogsBadge.remove();
+      existingSeparators.forEach(sep => sep.remove());
       const aiBadge = this.createProjectAIBadge(analysis);
       const devlogStats = this.calculateDevlogsPerHour(projectElement);
       let devlogRateStat = null;
@@ -910,6 +912,7 @@ class ProjectAIAnalyzer {
         if (statsElement) {
           const separator = document.createElement('span');
           separator.textContent = '•';
+          separator.className = 'som-voting-separator';
           statsElement.appendChild(separator);
           statsElement.appendChild(devlogRateStat);
         }
@@ -932,6 +935,7 @@ class ProjectAIAnalyzer {
           if (statsElement) {
             const separator = document.createElement('span');
             separator.textContent = '•';
+            separator.className = 'som-voting-separator';
             statsElement.appendChild(separator);
             statsElement.appendChild(aiBadge);
           }
@@ -1773,6 +1777,237 @@ function processProjectPage() {
   const projectElement = document.querySelector('[data-project-index]');
   if (projectElement) {
     processProjectAIAnalysis(projectElement);
+  }
+  addAICheckButton();
+}
+
+function addAICheckButton() {
+  if (document.querySelector('.som-ai-check-button')) {
+    return;
+  }
+  
+  let buttonContainer = document.querySelector('.flex.items-center.space-x-3.md\\:space-x-4.md\\:ml-4');
+  if (!buttonContainer) {
+    buttonContainer = document.querySelector('.flex.items-center.space-x-3');
+  }
+  if (!buttonContainer) {
+    buttonContainer = document.querySelector('.flex.items-center.gap-3');
+  }
+  if (!buttonContainer) {
+    const allButtons = document.querySelectorAll('.som-button-primary, .som-button-danger');
+    if (allButtons.length >= 2) {
+      buttonContainer = allButtons[0].parentElement;
+    }
+  }
+  
+  if (!buttonContainer) {
+    return;
+  }
+  
+  const aiCheckButton = document.createElement('button');
+  aiCheckButton.className = 'som-button-primary som-ai-check-button';
+  aiCheckButton.style.cssText = 'padding: 6px 12px; font-size: 0.8rem;';
+  aiCheckButton.innerHTML = `
+    <div class="flex items-center justify-center">
+      <span>Check AI</span>
+    </div>
+  `;
+
+  aiCheckButton.addEventListener('click', async () => {
+    await performIndividualProjectAnalysis(aiCheckButton);
+  });
+  
+  const deleteButton = buttonContainer.querySelector('.som-button-danger');
+  if (deleteButton && deleteButton.parentNode === buttonContainer) {
+    buttonContainer.insertBefore(aiCheckButton, deleteButton);
+  } else {
+    buttonContainer.appendChild(aiCheckButton);
+  }
+}
+
+async function extractIndividualProjectData() {
+  const data = {
+    title: '',
+    description: '',
+    devlogTexts: [],
+    readmeContent: '',
+    githubUrl: ''
+  };
+  
+  try {
+    const titleElement = document.querySelector('h1.text-2xl, h1[class*="text-2xl"]');
+    if (titleElement) {
+      data.title = titleElement.textContent.trim();
+    }
+    
+    const descriptionElement = document.querySelector('.mb-4.text-base p, .mb-4[class*="text-base"] p');
+    if (descriptionElement) {
+      data.description = descriptionElement.textContent.trim();
+    }
+    
+    const repoButton = document.querySelector('a[href*="github.com"]');
+    if (repoButton) {
+      data.githubUrl = repoButton.href;
+    }
+    
+    const readmeButton = document.querySelector('a[href*="README.md"], a[href*="readme.md"]');
+    if (readmeButton) {
+        const readmeUrl = readmeButton.href;
+        const response = await fetch(readmeUrl);
+        if (response.ok) {
+          data.readmeContent = await response.text();
+        }
+    }
+
+    const devlogCards = document.querySelectorAll('[data-viewable-type="Devlog"]');
+    for (const devlogCard of devlogCards) {
+        const proseElement = devlogCard.querySelector('.prose, [data-devlog-card-target="content"]');
+        if (proseElement) {
+          const devlogText = proseElement.textContent.trim();
+          if (devlogText && devlogText.length > 10) {
+            data.devlogTexts.push(devlogText);
+          }
+        }
+      }
+    return data;
+  } catch (error) {
+    return data;
+  }
+}
+
+async function performIndividualProjectAnalysis(buttonElement) {
+  try {
+    updateAICheckButtonState(buttonElement, 'loading');
+    const projectData = await extractIndividualProjectData();
+    
+    if (!projectData.title && !projectData.description && projectData.devlogTexts.length === 0) {
+      throw new Error('No project content found to analyze');
+    }
+    
+    const combinedContent = ProjectAIAnalyzer.combineContent(projectData);
+    
+    const projectAnalysis = await ProjectAIAnalyzer.analyzeContent(combinedContent);
+    
+    if (projectAnalysis) {
+      await displayIndividualProjectResults(projectAnalysis);
+      await analyzeIndividualDevlogs();
+      updateAICheckButtonState(buttonElement, 'completed');
+    } else {
+      throw new Error('AI analysis returned no results');
+    }
+    
+  } catch (error) {
+    updateAICheckButtonState(buttonElement, 'error');
+  }
+}
+
+function updateAICheckButtonState(buttonElement, state) {
+  const buttonContent = buttonElement.querySelector('div');
+  
+  switch (state) {
+    case 'loading':
+      buttonElement.disabled = true;
+      buttonElement.style.opacity = '0.7';
+      buttonContent.innerHTML = `<span>Analyzing...</span>`;
+      break;
+      
+    case 'completed':
+      buttonElement.disabled = false;
+      buttonElement.style.opacity = '1';
+      buttonContent.innerHTML = `<span>Refresh</span>`;
+      break;
+      
+    case 'error':
+      buttonElement.disabled = false;
+      buttonElement.style.opacity = '1';
+      buttonContent.innerHTML = `<span>Try Again</span>`;
+      break;
+  }
+}
+
+function cleanupAllAIBadges() {
+  const individualBadges = document.querySelectorAll('.som-individual-project-ai-badge');
+  const individualSeparators = document.querySelectorAll('.som-individual-project-separator');
+  individualBadges.forEach(badge => badge.remove());
+  individualSeparators.forEach(sep => sep.remove());
+  const votingBadges = document.querySelectorAll('.som-project-ai-badge, .som-devlog-rate-stat');
+  const votingSeparators = document.querySelectorAll('.som-voting-separator');
+  votingBadges.forEach(badge => badge.remove());
+  votingSeparators.forEach(sep => sep.remove());
+  const aiCheckButton = document.querySelector('.som-ai-check-button');
+  if (aiCheckButton) {
+    const buttonContent = aiCheckButton.querySelector('.flex');
+    if (buttonContent) {
+      buttonContent.innerHTML = '<span>Check AI</span>';
+    }
+    aiCheckButton.disabled = false;
+    aiCheckButton.style.opacity = '1';
+  }
+}
+
+window.addEventListener('beforeunload', cleanupAllAIBadges);
+window.addEventListener('pagehide', cleanupAllAIBadges);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    cleanupAllAIBadges();
+  }
+});
+
+document.addEventListener('turbo:before-visit', cleanupAllAIBadges);
+document.addEventListener('turbo:before-cache', cleanupAllAIBadges);
+
+async function displayIndividualProjectResults(analysis) {
+    cleanupAllAIBadges();
+    const projectBadge = ProjectAIAnalyzer.createProjectAIBadge(analysis);
+    projectBadge.classList.add('som-individual-project-ai-badge');
+    const statsContainer = document.querySelector('.flex.gap-3.flex-wrap.items-center.space-x-2.mb-1');
+    if (statsContainer) {
+      const separator = document.createElement('span');
+      separator.textContent = '•';
+      separator.className = 'text-som-dark som-individual-project-separator';
+      statsContainer.appendChild(separator);
+      statsContainer.appendChild(projectBadge);
+    } else {
+      const titleElement = document.querySelector('h1[class*="text-2xl"]');
+      if (titleElement && titleElement.parentNode) {
+        const badgeContainer = document.createElement('div');
+        badgeContainer.className = 'mt-2 mb-2 som-individual-project-ai-badge';
+        badgeContainer.appendChild(projectBadge);
+        titleElement.parentNode.insertBefore(badgeContainer, titleElement.nextSibling);
+      }
+    }
+}
+
+async function analyzeIndividualDevlogs() {
+  try {
+    const devlogCards = document.querySelectorAll('[data-viewable-type="Devlog"]');
+    for (const devlogCard of devlogCards) {
+      try {
+        if (devlogCard.hasAttribute('data-som-individual-analyzed')) {
+          continue;
+        }
+        
+        devlogCard.setAttribute('data-som-individual-analyzed', 'true');
+        const analysis = await DevlogAIAnalyzer.analyzeDevlogElement(devlogCard);
+        
+        if (analysis) {
+          const badge = DevlogAIAnalyzer.displayDevlogAIBadge(devlogCard, analysis);
+          const devlogHeader = devlogCard.querySelector('.flex.items-center.justify-between.mb-2');
+          if (devlogHeader && badge) {
+            const badgeContainer = document.createElement('div');
+            badgeContainer.className = 'ml-2';
+            badgeContainer.appendChild(badge);
+            devlogHeader.appendChild(badgeContainer);
+          }
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        console.error('SOM Utils: Error analyzing individual devlog:', error);
+      }
+    }
+  } catch (error) {
+    console.error('SOM Utils: Error in analyzeIndividualDevlogs:', error);
   }
 }
 
