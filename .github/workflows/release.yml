@@ -42,19 +42,19 @@ jobs:
           echo "⚠️ Warning: Chrome version ($CHROME_VERSION) != Firefox version ($FIREFOX_VERSION)"
         fi
     
-    - name: Check if release exists
-      id: check_release
+    - name: Delete existing release if it exists
       run: |
         if gh release view "v${{ env.VERSION }}" >/dev/null 2>&1; then
-          echo "exists=true" >> $GITHUB_OUTPUT
+          echo "🗑️ Deleting existing release v${{ env.VERSION }}..."
+          gh release delete "v${{ env.VERSION }}" --yes
+          echo "✅ Existing release deleted"
         else
-          echo "exists=false" >> $GITHUB_OUTPUT
+          echo "ℹ️ No existing release found for v${{ env.VERSION }}"
         fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Build Chrome extension package
-      if: steps.check_release.outputs.exists == 'false'
       run: |
         echo "Building Chrome extension..."
         
@@ -83,7 +83,6 @@ jobs:
         echo "✅ Chrome extension packaged: som-utils-chrome-v${{ env.VERSION }}.zip"
     
     - name: Build Firefox extension package
-      if: steps.check_release.outputs.exists == 'false'
       run: |
         echo "Building Firefox extension..."
         
@@ -113,7 +112,6 @@ jobs:
         echo "✅ Firefox extension packaged: som-utils-firefox-v${{ env.VERSION }}.zip"
     
     - name: Upload Chrome extension artifact
-      if: steps.check_release.outputs.exists == 'false'
       uses: actions/upload-artifact@v4
       with:
         name: som-utils-chrome-v${{ env.VERSION }}
@@ -121,7 +119,6 @@ jobs:
         retention-days: 30
     
     - name: Upload Firefox extension artifact
-      if: steps.check_release.outputs.exists == 'false'
       uses: actions/upload-artifact@v4
       with:
         name: som-utils-firefox-v${{ env.VERSION }}
@@ -129,7 +126,6 @@ jobs:
         retention-days: 30
     
     - name: Create unified release
-      if: steps.check_release.outputs.exists == 'false'
       run: |
         echo "🚀 Creating unified release v${{ env.VERSION }}..."
         
@@ -144,7 +140,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Summary
-      if: steps.check_release.outputs.exists == 'false'
       run: |
         echo "## 🎉 Release Summary" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
@@ -154,10 +149,3 @@ jobs:
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "🔗 **Release URL**: https://github.com/${{ github.repository }}/releases/tag/v${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
     
-    - name: Skip notification
-      if: steps.check_release.outputs.exists == 'true'
-      run: |
-        echo "ℹ️ Release v${{ env.VERSION }} already exists. Skipping build and release."
-        echo "## ℹ️ Skipped Release" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "Release v${{ env.VERSION }} already exists." >> $GITHUB_STEP_SUMMARY

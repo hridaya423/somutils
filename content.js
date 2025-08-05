@@ -1925,15 +1925,11 @@ function updateAICheckButtonState(buttonElement, state) {
   }
 }
 
-function cleanupAllAIBadges() {
+function cleanupIndividualProjectBadges() {
   const individualBadges = document.querySelectorAll('.som-individual-project-ai-badge');
   const individualSeparators = document.querySelectorAll('.som-individual-project-separator');
   individualBadges.forEach(badge => badge.remove());
   individualSeparators.forEach(sep => sep.remove());
-  const votingBadges = document.querySelectorAll('.som-project-ai-badge, .som-devlog-rate-stat');
-  const votingSeparators = document.querySelectorAll('.som-voting-separator');
-  votingBadges.forEach(badge => badge.remove());
-  votingSeparators.forEach(sep => sep.remove());
   const aiCheckButton = document.querySelector('.som-ai-check-button');
   if (aiCheckButton) {
     const buttonContent = aiCheckButton.querySelector('.flex');
@@ -1945,19 +1941,19 @@ function cleanupAllAIBadges() {
   }
 }
 
-window.addEventListener('beforeunload', cleanupAllAIBadges);
-window.addEventListener('pagehide', cleanupAllAIBadges);
+window.addEventListener('beforeunload', cleanupIndividualProjectBadges);
+window.addEventListener('pagehide', cleanupIndividualProjectBadges);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
-    cleanupAllAIBadges();
+    cleanupIndividualProjectBadges();
   }
 });
 
-document.addEventListener('turbo:before-visit', cleanupAllAIBadges);
-document.addEventListener('turbo:before-cache', cleanupAllAIBadges);
+document.addEventListener('turbo:before-visit', cleanupIndividualProjectBadges);
+document.addEventListener('turbo:before-cache', cleanupIndividualProjectBadges);
 
 async function displayIndividualProjectResults(analysis) {
-    cleanupAllAIBadges();
+    cleanupIndividualProjectBadges();
     const projectBadge = ProjectAIAnalyzer.createProjectAIBadge(analysis);
     projectBadge.classList.add('som-individual-project-ai-badge');
     const statsContainer = document.querySelector('.flex.gap-3.flex-wrap.items-center.space-x-2.mb-1');
