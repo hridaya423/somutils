@@ -637,6 +637,39 @@
   color: #059669;
 }
 
+.som-goal-remove-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: #dc2626;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s ease;
+  z-index: 100;
+  line-height: 1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.som-goal-marker:hover .som-goal-remove-btn {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.som-goal-remove-btn:hover {
+  background: #b91c1c;
+  transform: scale(1.2) !important;
+}
+
 
 @media (max-width: 768px) {
   .som-goals-progress-header {

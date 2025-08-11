@@ -2975,11 +2975,13 @@ function createGoalMarkers(goals, totalShells, currentShells) {
     return `
       <div class="som-goal-marker ${goal.canAfford ? 'som-goal-completed' : ''}"
            style="left: ${position}%"
+           data-goal-id="${goal.id}"
            title="${goal.name} (${goal.quantity}x ${goal.shellCost} shells = ${totalCost} shells)"
            aria-label="Goal: ${goal.name}, ${goal.quantity}x ${goal.shellCost} shells, total ${totalCost} shells, ${goal.canAfford ? 'completed' : 'in progress'}">
         <div class="som-goal-marker-circle">
           ${goal.imageUrl ? `<img src="${goal.imageUrl}" alt="${goal.name}" class="som-goal-marker-image" loading="lazy">` : `<span class="som-goal-marker-fallback">🎯</span>`}
         </div>
+        <button class="som-goal-remove-btn" aria-label="Remove ${goal.name} from goals" title="Remove goal">×</button>
         ${goal.quantity > 1 ? `<div class="som-goal-quantity-badge">${goal.quantity}x</div>` : ''}
       </div>
     `;
@@ -3019,6 +3021,49 @@ function addGoalsProgressHeader() {
     }
   }
   
+  const removeButtons = progressHeader.querySelectorAll('.som-goal-remove-btn');
+  removeButtons.forEach(button => {
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const goalMarker = button.closest('.som-goal-marker');
+      const goalId = goalMarker.getAttribute('data-goal-id');
+      
+      const goalsData = getGoalsData();
+      const goal = goalsData.goals.find(g => g.id === goalId);
+      const quantityToRemove = goal ? goal.quantity : 99; 
+      
+      if (goalId && removeGoalItem(goalId, quantityToRemove)) {
+        addGoalsProgressHeader();
+        updateAllGoalButtons();
+      }
+    });
+  });
+}
+
+function updateAllGoalButtons() {
+  const shopCards = document.querySelectorAll('.card-with-gradient[data-controller="card"]');
+  shopCards.forEach(card => {
+    const existingContainer = card.querySelector('.som-goal-button-container');
+    const existingAccordion = card.querySelector('.som-stats-accordion');
+    if (existingContainer) {
+      existingContainer.remove();
+      if (existingAccordion) existingAccordion.remove();
+      addGoalButton(card);
+    }
+  });
+  
+  const blackMarketItems = document.querySelectorAll('.shop-item-row');
+  blackMarketItems.forEach(item => {
+    const existingContainer = item.querySelector('.som-goal-button-container');
+    const existingAccordion = item.querySelector('.som-stats-accordion');
+    if (existingContainer) {
+      existingContainer.remove();
+      if (existingAccordion) existingAccordion.remove();
+      addBlackMarketGoalButton(item);
+    }
+  });
 }
 
 function updateGoalsProgressHeader() {
@@ -3027,10 +3072,6 @@ function updateGoalsProgressHeader() {
 
 function processShopPage() {
   const shopCards = document.querySelectorAll('.card-with-gradient[data-controller="card"]');
-  
-  const averageEfficiency = getUserAverageEfficiency();
-  
-
   addGoalsProgressHeader();
   
   shopCards.forEach(card => {
