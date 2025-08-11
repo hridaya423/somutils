@@ -3432,6 +3432,39 @@ async function processProjectAIAnalysis(projectElement) {
   }
 }
 
+function removeSinkingStuff() {
+  const sinkeningContainers = document.querySelectorAll('.sinkening-container');
+  sinkeningContainers.forEach(container => {
+    container.classList.remove('sinkening-container');
+  });
+  
+  const audioElements = document.querySelectorAll('#sinkening-wave-music, audio[id="sinkening-wave-music"]');
+  audioElements.forEach(audio => audio.remove());
+  
+  const waterElements = document.querySelectorAll('.sinkening-water, .sinkening-water-2');
+  waterElements.forEach(water => {
+    const parentDiv = water.closest('.w-full.overflow-hidden');
+    if (parentDiv && parentDiv.children.length <= 2) {
+      parentDiv.remove();
+    } else {
+      water.remove();
+    }
+  });
+  
+  const waterContainers = document.querySelectorAll('div.w-full.overflow-hidden');
+  waterContainers.forEach(container => {
+    const children = Array.from(container.children);
+    const hasOnlyWaterChildren = children.length > 0 && children.every(child => 
+      child.classList.contains('sinkening-water') || 
+      child.classList.contains('sinkening-water-2') ||
+      (child.classList.contains('fixed') && child.querySelector('.sinkening-water, .sinkening-water-2'))
+    );
+    if (hasOnlyWaterChildren && children.length <= 3) {
+      container.remove();
+    }
+  });
+}
+
 function processCurrentPage() {
   const currentPath = window.location.pathname;
   const now = Date.now();
@@ -3448,6 +3481,8 @@ function processCurrentPage() {
     if (heidimarketLoader && heidimarketLoader.textContent.includes('heidimarket')) {
       heidimarketLoader.classList.add('fade-out');
     }
+    
+    removeSinkingStuff();
     
     addFilePasteSupport();
     
