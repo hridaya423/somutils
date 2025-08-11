@@ -155,7 +155,7 @@
 }
 
 .som-shell-icon {
-  font-size: 0.75rem;
+  font-size: 0.6rem;
   opacity: 0.8;
 }
 
@@ -222,13 +222,17 @@
 
 .som-time-row:has(.som-goal-button) {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
 }
 
+.som-time-row:has(.som-goal-button) .som-time-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 
 .som-time-row .som-goal-button {
-  margin-left: auto;
   flex-shrink: 0;
   margin-top: 0;
 }
@@ -279,6 +283,66 @@
   font-weight: 600;
   color: #059669;
   text-align: center;
+}
+
+/* Black Market Enhanced Estimates - Smaller and Minimal Theme */
+.shop-item-row .som-utils-enhanced-estimate {
+  padding: 8px 12px;
+  margin-top: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(156, 163, 175, 0.3);
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  font-size: 0.8rem;
+}
+
+.shop-item-row .som-shell-progress {
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.shop-item-row .som-shell-progress img {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+.shop-item-row .som-progress-bar {
+  height: 4px;
+}
+
+.shop-item-row .som-shell-fraction {
+  font-size: 0.7rem;
+}
+
+.shop-item-row .som-time-row {
+  font-size: 0.7rem;
+  gap: 4px;
+}
+
+.shop-item-row .som-time-icon {
+  font-size: 0.6rem;
+}
+
+.shop-item-row .som-affordable-total {
+  font-size: 0.8rem;
+}
+
+.shop-item-row .som-stats-accordion {
+  margin-top: 6px;
+  border: 1px solid rgba(156, 163, 175, 0.2);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.shop-item-row .som-stats-toggle {
+  padding: 6px 10px;
+}
+
+.shop-item-row .som-toggle-text {
+  font-size: 0.7rem;
+}
+
+.shop-item-row .som-toggle-summary {
+  font-size: 0.65rem;
 }
 
 @media (max-width: 768px) {

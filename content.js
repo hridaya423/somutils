@@ -228,6 +228,15 @@ function getCurrentUserShells(projected = false) {
     }
   }
   
+  if (currentShells > 0) {
+    localStorage.setItem('som-utils-current-shells', currentShells.toString());
+  } else {
+    const storedShells = localStorage.getItem('som-utils-current-shells');
+    if (storedShells) {
+      currentShells = parseFloat(storedShells);
+    }
+  }
+  
   if (!projected) {
     return currentShells;
   }
@@ -2034,7 +2043,7 @@ function createEnhancedTimeEstimate(shellCost, currentShells, totalHours, hoursN
     container.innerHTML = `
       <div class="som-progress-container" role="region" aria-label="Shell progress and time estimate">
         <div class="som-shell-progress">
-          <img src="/shell.png" class="w-4 h-4" alt="shell" loading="lazy">
+          <img src="/shell.png" class="w-3 h-3" alt="shell" loading="lazy">
           <div class="som-progress-bar" role="progressbar" aria-valuenow="${currentShells}" aria-valuemin="0" aria-valuemax="${shellCost}" aria-label="Shell progress: ${currentShells} out of ${shellCost} shells">
             <div class="som-progress-fill ${affordabilityClass}" style="width: ${progressPercentage}%"></div>
           </div>
@@ -2042,12 +2051,16 @@ function createEnhancedTimeEstimate(shellCost, currentShells, totalHours, hoursN
         </div>
         <div class="som-time-estimates">
           <div class="som-time-row">
-            <span class="som-time-icon" aria-hidden="true">⏱️</span>
-            <span class="som-time-total">Total: ${formatTimeDisplay(totalHours)} at your pace</span>
+            <div class="som-time-content">
+              <span class="som-time-icon" aria-hidden="true">⏱️</span>
+              <span class="som-time-total">Total: ${formatTimeDisplay(totalHours)} at your pace</span>
+            </div>
           </div>
           <div class="som-time-row">
-            <span class="som-time-icon" aria-hidden="true">⏳</span>
-            <span class="som-time-needed ${affordabilityClass}">Need: ${formatTimeDisplay(hoursNeeded)} more</span>
+            <div class="som-time-content">
+              <span class="som-time-icon" aria-hidden="true">⏳</span>
+              <span class="som-time-needed ${affordabilityClass}">Need: ${formatTimeDisplay(hoursNeeded)} more</span>
+            </div>
           </div>
         </div>
       </div>
@@ -2101,6 +2114,35 @@ function updateShopTimeEstimate(card) {
   }
 }
 
+function updateBlackMarketTimeEstimate(shopItemRow) {
+  
+  if (shopItemRow.querySelector('.som-utils-enhanced-estimate')) {
+    return;
+  }
+  
+  const averageEfficiency = getUserAverageEfficiency();
+  if (!averageEfficiency) {
+    return;
+  }
+  
+  const itemData = extractBlackMarketItemData(shopItemRow);
+  if (!itemData.shellCost || itemData.shellCost <= 0) {
+    return;
+  }
+  
+  const currentShells = getCurrentUserShells();
+  const shellsNeeded = Math.max(0, itemData.shellCost - currentShells);
+  const totalHours = itemData.shellCost / averageEfficiency;
+  const hoursNeeded = shellsNeeded / averageEfficiency;
+
+  const enhancedEstimate = createEnhancedTimeEstimate(itemData.shellCost, currentShells, totalHours, hoursNeeded);
+  
+  const actionsElement = shopItemRow.querySelector('.shop-item-actions');
+  if (actionsElement) {
+    actionsElement.parentNode.insertBefore(enhancedEstimate, actionsElement.nextSibling);
+  }
+}
+
 function getGoalsData() {
   const data = localStorage.getItem('som-utils-goals');
   if (!data) {
@@ -2132,6 +2174,32 @@ function getGoalsData() {
 function saveGoalsData(data) {
   localStorage.setItem('som-utils-goals', JSON.stringify(data));
   console.log('SOM Utils: Saved goals data:', data);
+}
+
+function getBlackMarketItemPrice(itemId) {
+  const data = localStorage.getItem('som-utils-black-market-prices');
+  if (!data) return 0;
+  
+  try {
+    const prices = JSON.parse(data);
+    return prices[itemId] || 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+function saveBlackMarketItemPrice(itemId, price) {
+  if (!itemId || price <= 0) return;
+  
+  const data = localStorage.getItem('som-utils-black-market-prices') || '{}';
+  
+  try {
+    const prices = JSON.parse(data);
+    prices[itemId] = price;
+    localStorage.setItem('som-utils-black-market-prices', JSON.stringify(prices));
+  } catch (e) {
+    console.warn('SOM Utils: Failed to save black market price:', e);
+  }
 }
 
 function addGoalItem(itemData, quantity = 1) {
@@ -2291,6 +2359,52 @@ function extractItemDataFromCard(card) {
   
   
   const id = `${name.toLowerCase().replace(/\s+/g, '-')}-${shellCost}`;
+  
+  return {
+    id: id,
+    name: name,
+    shellCost: shellCost,
+    imageUrl: imageUrl
+  };
+}
+
+function extractBlackMarketItemData(shopItemRow) {
+  const nameElement = shopItemRow.querySelector('.shop-item-title');
+  const name = nameElement ? nameElement.textContent.trim() : 'Unknown Item';
+  
+  const imgElement = shopItemRow.querySelector('.shop-item-image img');
+  const imageUrl = imgElement ? imgElement.src : '';
+  
+  let shellCost = 0;
+  const buttonElement = shopItemRow.querySelector('.shop-item-actions button');
+  if (buttonElement) {
+    const buttonText = buttonElement.textContent.trim();
+    
+    let costMatch = buttonText.match(/Buy for\s*(\d+)/i);
+    if (costMatch) {
+      shellCost = parseInt(costMatch[1]);
+    } else {
+      costMatch = buttonText.match(/(\d+)\s*needed/i);
+      if (costMatch) {
+        const needed = parseInt(costMatch[1]);
+        const currentShells = getCurrentUserShells();
+        shellCost = needed + currentShells;
+      }
+    }
+  }
+  
+  const baseId = `bm-${name.toLowerCase().replace(/\s+/g, '-')}`;
+    
+  if (shellCost === 0) {
+    const storedPrice = getBlackMarketItemPrice(baseId);
+    if (storedPrice > 0) {
+      shellCost = storedPrice;
+    }
+  } else {
+    saveBlackMarketItemPrice(baseId, shellCost);
+  }
+  
+  const id = `${baseId}-${shellCost}`;
   
   return {
     id: id,
@@ -2731,6 +2845,54 @@ function addGoalButton(card) {
   }
 }
 
+function addBlackMarketGoalButton(shopItemRow) {
+  
+  if (shopItemRow.querySelector('.som-goal-button-container')) {
+    return;
+  }
+  
+  const itemData = extractBlackMarketItemData(shopItemRow);
+  if (!itemData.shellCost || itemData.shellCost <= 0) {
+    return;
+  }
+  
+  const goalsData = getGoalsData();
+  const existingGoal = goalsData.goals.find(goal => goal.id === itemData.id);
+  const currentQuantity = existingGoal ? existingGoal.quantity : 1;
+  
+  const isInGoals = isItemInGoals(itemData.id);
+  const goalButtonContainer = createGoalButton(itemData, isInGoals, currentQuantity);
+  
+  const currentShells = getCurrentUserShells();
+  const averageEfficiency = getUserAverageEfficiency();
+  const accordion = createAdvancedStatsAccordion(itemData, currentShells, averageEfficiency);
+  
+  const enhancedEstimate = shopItemRow.querySelector('.som-utils-enhanced-estimate');
+  if (enhancedEstimate) {
+    const progressContainer = enhancedEstimate.querySelector('.som-progress-container');
+    
+    if (progressContainer) {
+      const lastTimeRow = progressContainer.querySelector('.som-time-estimates .som-time-row:last-child');
+      if (lastTimeRow) {
+        lastTimeRow.appendChild(goalButtonContainer);
+      } else {
+        enhancedEstimate.appendChild(goalButtonContainer);
+      }
+    } else {
+      enhancedEstimate.appendChild(goalButtonContainer);
+    }
+    
+    enhancedEstimate.parentNode.insertBefore(accordion, enhancedEstimate.nextSibling);
+  } else {
+    const actionsElement = shopItemRow.querySelector('.shop-item-actions');
+    const detailsElement = shopItemRow.querySelector('.shop-item-details');
+    if (actionsElement && detailsElement) {
+      actionsElement.appendChild(goalButtonContainer);
+      detailsElement.parentNode.insertBefore(accordion, detailsElement.nextSibling);
+    }
+  }
+}
+
 function createGoalsProgressHeader() {
   const progressData = calculateGoalProgress(window.somUtilsProjectionMode);
   
@@ -2874,6 +3036,15 @@ function processShopPage() {
   shopCards.forEach(card => {
     updateShopTimeEstimate(card);
     addGoalButton(card);
+  });
+}
+
+function processBlackMarketPage() {
+  const shopItems = document.querySelectorAll('.shop-item-row');
+  
+  shopItems.forEach(item => {
+    updateBlackMarketTimeEstimate(item);
+    addBlackMarketGoalButton(item);
   });
 }
 
@@ -3232,6 +3403,11 @@ function processCurrentPage() {
   isProcessing = true;
   
   try {
+    const heidimarketLoader = document.querySelector('.loader');
+    if (heidimarketLoader && heidimarketLoader.textContent.includes('heidimarket')) {
+      heidimarketLoader.classList.add('fade-out');
+    }
+    
     addFilePasteSupport();
     
     displayUserRank();
@@ -3254,6 +3430,8 @@ function processCurrentPage() {
       processProjectPage();
     } else if (currentPath === '/shop') {
       processShopPage();
+    } else if (currentPath === '/shop/black_market') {
+      processBlackMarketPage();
     } else {
       processProjectCards();
     }
