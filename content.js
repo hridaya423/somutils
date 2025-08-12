@@ -263,7 +263,7 @@ function saveUserEfficiency(shells, hours) {
 
 function getUserAverageEfficiency() {
   const accurateEfficiency = getUserAverageEfficiencyFromShipData();
-  if (accurateEfficiency !== null) {
+  if (accurateEfficiency !== null && accurateEfficiency > 0) {
     return accurateEfficiency;
   }
   
@@ -286,7 +286,7 @@ function getUserAverageEfficiency() {
   });
   
   const fallbackEfficiency = totalHours > 0 ? calculateShellsPerHour(totalShells, totalHours) : null;
-  return fallbackEfficiency;
+  return fallbackEfficiency && fallbackEfficiency > 0 ? fallbackEfficiency : null;
 }
 
 function getUserAverageEfficiencyFromShipData() {
@@ -409,7 +409,7 @@ function getCurrentUserShells(projected = false) {
   }
   
   let efficiency = getUserAverageEfficiency();
-  if (!efficiency) {
+  if (!efficiency || efficiency <= 0) {
     efficiency = 10;
   }
   
