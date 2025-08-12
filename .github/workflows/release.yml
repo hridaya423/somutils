@@ -71,6 +71,8 @@ jobs:
         [ -f PrivacyPolicy.md ] && cp PrivacyPolicy.md temp-chrome-extension/
         [ -f wasm-data-url.js ] && cp wasm-data-url.js temp-chrome-extension/
         [ -f wasm_base64.txt ] && cp wasm_base64.txt temp-chrome-extension/
+        [ -f chart.min.js ] && cp chart.min.js temp-chrome-extension/
+        [ -f chartjs-adapter-data-fns-bundle.min.js ] && cp chartjs-adapter-data-fns-bundle.min.js temp-chrome-extension/
         
         # Create Chrome ZIP
         cd temp-chrome-extension
@@ -100,6 +102,8 @@ jobs:
         [ -f PrivacyPolicy.md ] && cp PrivacyPolicy.md temp-firefox-extension/
         [ -f wasm-data-url.js ] && cp wasm-data-url.js temp-firefox-extension/
         [ -f wasm_base64.txt ] && cp wasm_base64.txt temp-firefox-extension/
+        [ -f chart.min.js ] && cp chart.min.js temp-firefox-extension/
+        [ -f chartjs-adapter-data-fns-bundle.min.js ] && cp chartjs-adapter-data-fns-bundle.min.js temp-firefox-extension/
         
         # Create Firefox ZIP
         cd temp-firefox-extension
