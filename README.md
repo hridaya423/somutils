@@ -1,4 +1,5 @@
-# SOM Utils
+<img width="856" height="256" alt="Untitled design (8)" src="https://github.com/user-attachments/assets/23dacde4-b023-44bb-9c2e-a3a3e593acb4" />
+
 
 A browser extension that adds useful features and stats to Summer of Making site.
 
@@ -8,9 +9,7 @@ Compatible with Chrome, Firefox and Safari!
 
 - **Vote Estimation**: Estimates how many votes your projects received based on shells and hours
 - **Leaderboard Rank**: Shows your current rank and economy percentage next to shell count
-- **Devlogs per hour**: Useful stat while you're voting
-- **AI Detection**: Detects potential AI-generated content in devlogs and projects during voting
-- **Multi-Quantity Goals**: Add multiple quantities (1-99x) of shop items to goals with progress tracking
+- **Voting stats**: Detects potential AI-generated content in devlogs and projects during voting and gives devlogs per hour
 - **Shells/Hour Display**: Shows efficiency metrics on project cards with smart badges
 - **Sorting**: Sort projects by:
   - Most/Least Hours worked
@@ -20,9 +19,9 @@ Compatible with Chrome, Firefox and Safari!
 - **Paste Files for devlogs**: Paste images/files directly into devlogs!
 - **Personalized Time Estimates**: Uses your efficiency data for accurate estimates
 - **Goal Tracking System**: Add shop items to goals and track progress
-- **Advanced Stats**: Interactive calculators and efficiency comparisons
-- **Black Market**: Support for black market shop items and enhanced estimates
-- **Ship Data**:  ship-by-ship efficiency tracking 
+- **Advanced Stats**: Efficiency comparisons, and custom calculator too
+- **Black Market**: Support for black market shop items and enhanced estimates and you get preferred customer for free
+- **Ship Data**:  ship-by-ship efficiency tracking and a beautiful graph to see ship efficiency if you have multiple
 
 ## Installation
 
