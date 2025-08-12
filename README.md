@@ -21,6 +21,8 @@ Compatible with Chrome, Firefox and Safari!
 - **Personalized Time Estimates**: Uses your efficiency data for accurate estimates
 - **Goal Tracking System**: Add shop items to goals and track progress
 - **Advanced Stats**: Interactive calculators and efficiency comparisons
+- **Black Market**: Support for black market shop items and enhanced estimates
+- **Ship Data**:  ship-by-ship efficiency tracking 
 
 ## Installation
 
