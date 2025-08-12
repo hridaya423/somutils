@@ -1,4 +1,5 @@
-# SOM Utils
+<img width="856" height="256" alt="Untitled design (8)" src="https://github.com/user-attachments/assets/23dacde4-b023-44bb-9c2e-a3a3e593acb4" />
+
 
 A browser extension that adds useful features and stats to Summer of Making site.
 
