@@ -129,6 +129,31 @@ function parseTimeString(timeStr) {
   return hours + (minutes / 60);
 }
 
+function parseRelativeDate(relativeTimeString) {
+  const now = new Date();
+  const timeStr = relativeTimeString.toLowerCase().trim();
+  
+  const patterns = [
+    { regex: /(\d+)\s*minute[s]?\s*ago/, multiplier: 60 * 1000 },
+    { regex: /(\d+)\s*hour[s]?\s*ago/, multiplier: 60 * 60 * 1000 },
+    { regex: /(\d+)\s*day[s]?\s*ago/, multiplier: 24 * 60 * 60 * 1000 },
+    { regex: /(\d+)\s*week[s]?\s*ago/, multiplier: 7 * 24 * 60 * 60 * 1000 },
+    { regex: /(\d+)\s*month[s]?\s*ago/, multiplier: 30 * 24 * 60 * 60 * 1000 }
+  ];
+  
+  for (const pattern of patterns) {
+    const match = timeStr.match(pattern.regex);
+    if (match) {
+      const amount = parseInt(match[1]);
+      const millisecondsAgo = amount * pattern.multiplier;
+      return new Date(now.getTime() - millisecondsAgo);
+    }
+  }
+  
+  console.warn('SOM Utils: Could not parse relative date:', relativeTimeString);
+  return now;
+}
+
 function parseShellsString(shellsText) {
   if (!shellsText) {
     return 0;
@@ -154,6 +179,58 @@ function parseShellsString(shellsText) {
 function calculateShellsPerHour(shells, hours) {
   if (hours === 0) return 0;
   return shells / hours;
+}
+
+function getShipDataForProject(projectId) {
+  try {
+    const data = JSON.parse(localStorage.getItem('som-utils-ship-efficiency') || '{"projects": {}}');
+    const projectData = data.projects[projectId];
+    
+    if (!projectData || !projectData.history || projectData.history.length === 0) {
+      return null;
+    }
+    
+    const latestEntry = projectData.history[projectData.history.length - 1];
+    
+    const totalShippedShells = latestEntry.ships.reduce((sum, ship) => sum + ship.shells, 0);
+    const totalShippedHours = latestEntry.ships.reduce((sum, ship) => sum + ship.hours, 0);
+    
+    
+    return {
+      shippedShells: totalShippedShells,
+      shippedHours: totalShippedHours,
+      ships: latestEntry.ships,
+      timestamp: latestEntry.timestamp,
+      hasShipData: true
+    };
+  } catch (error) {
+    console.error('SOM Utils: Error retrieving ship data for project', projectId, ':', error);
+    return null;
+  }
+}
+
+function calculateAccurateEfficiency(projectId, fallbackShells, fallbackHours) {
+  const shipData = getShipDataForProject(projectId);
+  
+  if (shipData && shipData.shippedHours > 0) {
+    const accuracy = calculateShellsPerHour(shipData.shippedShells, shipData.shippedHours);
+    return {
+      efficiency: accuracy,
+      shells: shipData.shippedShells,
+      hours: shipData.shippedHours,
+      isAccurate: true,
+      source: 'ship_data'
+    };
+  } else {
+    const fallbackEfficiency = calculateShellsPerHour(fallbackShells, fallbackHours);
+    return {
+      efficiency: fallbackEfficiency,
+      shells: fallbackShells,
+      hours: fallbackHours,
+      isAccurate: false,
+      source: 'total_time'
+    };
+  }
 }
 
 function saveUserEfficiency(shells, hours) {
@@ -185,6 +262,11 @@ function saveUserEfficiency(shells, hours) {
 }
 
 function getUserAverageEfficiency() {
+  const accurateEfficiency = getUserAverageEfficiencyFromShipData();
+  if (accurateEfficiency !== null) {
+    return accurateEfficiency;
+  }
+  
   let data;
   try {
     data = JSON.parse(localStorage.getItem('som-utils-efficiency') || '{"projects": []}');
@@ -203,7 +285,92 @@ function getUserAverageEfficiency() {
     totalHours += project.hours;
   });
   
-  return totalHours > 0 ? calculateShellsPerHour(totalShells, totalHours) : null;
+  const fallbackEfficiency = totalHours > 0 ? calculateShellsPerHour(totalShells, totalHours) : null;
+  return fallbackEfficiency;
+}
+
+function getUserAverageEfficiencyFromShipData() {
+  try {
+    const shipData = JSON.parse(localStorage.getItem('som-utils-ship-efficiency') || '{"projects": {}}');
+    
+    let totalShippedShells = 0;
+    let totalShippedHours = 0;
+    let projectsWithShips = 0;
+    
+    Object.keys(shipData.projects).forEach(projectId => {
+      const projectData = shipData.projects[projectId];
+      if (projectData.history && projectData.history.length > 0) {
+        const latestEntry = projectData.history[projectData.history.length - 1];
+        if (latestEntry.ships && latestEntry.ships.length > 0) {
+          const projectShells = latestEntry.ships.reduce((sum, ship) => sum + ship.shells, 0);
+          const projectHours = latestEntry.ships.reduce((sum, ship) => sum + ship.hours, 0);
+          
+          if (projectShells > 0 && projectHours > 0) {
+            totalShippedShells += projectShells;
+            totalShippedHours += projectHours;
+            projectsWithShips++;
+          }
+        }
+      }
+    });
+    
+    if (projectsWithShips === 0 || totalShippedHours === 0) {
+      return null;
+    }
+    
+    return calculateShellsPerHour(totalShippedShells, totalShippedHours);
+    
+  } catch (error) {
+    return null;
+  }
+}
+
+function saveShipEfficiencyData(projectId, shipsData) {
+  let data;
+  try {
+    data = JSON.parse(localStorage.getItem('som-utils-ship-efficiency') || '{"projects": {}}');
+  } catch (error) {
+    data = { projects: {} };
+  }
+  
+  if (!data.projects[projectId]) {
+    data.projects[projectId] = { history: [] };
+  }
+  
+  const timestamp = Date.now();
+  const historyEntry = {
+    timestamp: timestamp,
+    ships: shipsData.map(ship => ({
+      name: ship.name,
+      shells: ship.shells,
+      hours: ship.hours,
+      efficiency: ship.efficiency,
+      voteEstimation: ship.voteEstimation
+    })),
+    projectTotal: {
+      shells: shipsData.reduce((sum, ship) => sum + ship.shells, 0),
+      hours: shipsData.reduce((sum, ship) => sum + ship.hours, 0),
+      efficiency: calculateProjectTotalEfficiency()
+    }
+  };
+  
+  data.projects[projectId].history.push(historyEntry);
+  
+  if (data.projects[projectId].history.length > 50) {
+    data.projects[projectId].history = data.projects[projectId].history.slice(-50);
+  }
+  
+  localStorage.setItem('som-utils-ship-efficiency', JSON.stringify(data));
+}
+
+function getShipEfficiencyHistory(projectId) {
+  try {
+    const data = JSON.parse(localStorage.getItem('som-utils-ship-efficiency') || '{"projects": {}}');
+    return data.projects[projectId]?.history || [];
+  } catch (error) {
+    console.error('SOM Utils: Error parsing ship efficiency history:', error);
+    return [];
+  }
 }
 
 function getCurrentUserShells(projected = false) {
@@ -497,18 +664,40 @@ async function displayUserRank() {
   }
 }
 
-function createCornerBadge(shellsPerHour) {
+function createCornerBadge(shellsPerHour, efficiencyData = null) {
   const badge = document.createElement('div');
   badge.className = 'som-utils-corner-badge';
+  
+  let tooltip = `${shellsPerHour.toFixed(1)} shells per hour`;
+  if (efficiencyData) {
+    if (efficiencyData.isAccurate) {
+      tooltip += ` (based on ${efficiencyData.hours.toFixed(1)}h shipped work)`;
+    } else {
+      tooltip += ` (estimated from total project time)`;
+    }
+  }
+  
+  badge.title = tooltip;
   badge.innerHTML = `
     <span class="som-badge-text">${shellsPerHour.toFixed(1)}/hr</span>
   `;
   return badge;
 }
 
-function createInlineMetric(shellsPerHour) {
+function createInlineMetric(shellsPerHour, efficiencyData = null) {
   const metric = document.createElement('p');
   metric.className = 'som-utils-inline-metric';
+  
+  let tooltip = `${shellsPerHour.toFixed(1)} shells per hour`;
+  if (efficiencyData) {
+    if (efficiencyData.isAccurate) {
+      tooltip += ` (based on ${efficiencyData.hours.toFixed(1)}h shipped work)`;
+    } else {
+      tooltip += ` (estimated from total project time)`;
+    }
+  }
+  
+  metric.title = tooltip;
   metric.innerHTML = `
     <span class="som-metric-value">${shellsPerHour.toFixed(1)}</span>
     <span class="som-metric-label">shells/hour</span>
@@ -1210,6 +1399,18 @@ function addShellsPerHourToCard(card) {
   if (card.querySelector('[class*="som-utils"]')) {
     return;
   }
+
+  let projectId = null;
+  if (card.href) {
+    const match = card.href.match(/\/projects\/(\d+)/);
+    if (match) projectId = match[1];
+  } else {
+    const linkElement = card.querySelector('a[href*="/projects/"]');
+    if (linkElement) {
+      const match = linkElement.href.match(/\/projects\/(\d+)/);
+      if (match) projectId = match[1];
+    }
+  }
   
   const grayTexts = card.querySelectorAll('p.text-gray-400');
   
@@ -1240,15 +1441,27 @@ function addShellsPerHourToCard(card) {
   
   if (!timeText) return;
   
-  const hours = parseTimeString(timeText);
+  const totalHours = parseTimeString(timeText);
   const shells = parseShellsString(shellsText);
-  const shellsPerHour = calculateShellsPerHour(shells, hours);
   
-  if (shells > 0 && hours > 0) {
-    saveUserEfficiency(shells, hours);
-    
-    
-    const voteEstimation = VoteEstimationService.estimateVotes(shells, hours);
+  let efficiencyData;
+  if (projectId) {
+    efficiencyData = calculateAccurateEfficiency(projectId, shells, totalHours);
+  } else {
+    efficiencyData = {
+      efficiency: calculateShellsPerHour(shells, totalHours),
+      shells: shells,
+      hours: totalHours,
+      isAccurate: false,
+      source: 'total_time'
+    };
+  }
+  
+  const shellsPerHour = efficiencyData.efficiency;
+  
+  if (shells > 0 && efficiencyData.hours > 0) {
+    saveUserEfficiency(shells, efficiencyData.hours);
+    const voteEstimation = VoteEstimationService.estimateVotes(shells, efficiencyData.hours);
     if (voteEstimation.estimatedVotes > 0) {
       const voteDisplay = createVoteEstimateDisplay(voteEstimation.estimatedVotes, voteEstimation.confidence, voteEstimation.details);
       const lastGrayText = card.querySelector('p.text-gray-400:last-of-type');
@@ -1256,7 +1469,7 @@ function addShellsPerHourToCard(card) {
         lastGrayText.parentNode.insertBefore(voteDisplay, lastGrayText.nextSibling);
       }
     }
-  } else if (shells === -1 && hours > 0 && hasCertificationReview) {
+  } else if (shells === -1 && totalHours > 0 && hasCertificationReview) {
     const reviewDisplay = createSubtleText('🔍 Awaiting ship certification', true);
     const lastGrayText = card.querySelector('p.text-gray-400:last-of-type');
     if (lastGrayText && lastGrayText.parentNode) {
@@ -1266,14 +1479,14 @@ function addShellsPerHourToCard(card) {
   
   let displayElement;
   
-  if (hours === 0) {
+  if (totalHours === 0) {
     displayElement = createSubtleText('⏱️ No time tracked yet');
   } else if (shells === -1 && hasCertificationReview) {
     displayElement = createSubtleText('🔍 Ship certification review', true);
   } else if (shells === 0) {
     displayElement = createSubtleText('🚀 Ship to earn shells!', true);
   } else if (shellsPerHour >= 10) {
-    displayElement = createCornerBadge(shellsPerHour);
+    displayElement = createCornerBadge(shellsPerHour, efficiencyData);
     
     const cardContainer = card.querySelector('div');
     if (cardContainer) {
@@ -1282,7 +1495,7 @@ function addShellsPerHourToCard(card) {
       return;
     }
   } else if (shellsPerHour > 0) {
-    displayElement = createInlineMetric(shellsPerHour);
+    displayElement = createInlineMetric(shellsPerHour, efficiencyData);
   }
   
   if (displayElement && !displayElement.classList.contains('som-utils-corner-badge')) {
@@ -1730,35 +1943,92 @@ function addProjectSortInterface(projectCards, projectData) {
 }
 
 
-function calculateProjectTotalEfficiency() {
-  const shipElements = document.querySelectorAll('p');
-  let totalShells = 0;
+function extractAllShipsData() {
+  const ships = [];
+  const shipCards = document.querySelectorAll('.card-with-gradient');
   
-  shipElements.forEach(shipElement => {
-    if (shipElement.textContent.includes('payout of') && shipElement.textContent.includes('shells')) {
-      const shellsMatch = shipElement.textContent.match(/(\d+(?:\.\d+)?)\s*shells/);
-      if (shellsMatch) {
-        totalShells += parseFloat(shellsMatch[1]);
-      }
+  shipCards.forEach((shipCard, index) => {
+    const shipData = extractIndividualShipData(shipCard, index);
+    if (shipData && shipData.shells > 0) {
+      ships.push(shipData);
     }
   });
   
-  const svgElements = document.querySelectorAll('svg[width="50"][height="53"]');
-  let totalHours = 0;
-  
-  svgElements.forEach(svg => {
-    const container = svg.closest('div');
-    if (container) {
-      const timeSpan = container.querySelector('span.text-som-dark');
-      if (timeSpan) {
-        const text = timeSpan.textContent.trim();
-        if (text.match(/\d+h(?:\s+\d+m)?/)) {
-          totalHours = parseTimeString(text);
+  return ships;
+}
+
+function extractIndividualShipData(shipCard, index) {
+  try {
+    const shipNameElement = shipCard.querySelector('p.font-extrabold');
+    if (!shipNameElement || !shipNameElement.textContent.includes('Ship')) {
+      return null;
+    }
+    
+    const shipName = shipNameElement.textContent.trim();
+    
+    let shellsText = '';
+    let shells = 0;
+    
+    Array.from(shipCard.querySelectorAll('p')).forEach(p => {
+      if (p.textContent.includes('payout of') && p.textContent.includes('shells')) {
+        shellsText = p.textContent;
+        const shellsMatch = shellsText.match(/(\d+(?:\.\d+)?)\s*shells/);
+        if (shellsMatch) {
+          shells = parseFloat(shellsMatch[1]);
         }
       }
+    });
+    
+    if (shells === 0) {
+      return null;
     }
-  });
+    
+    let hours = 0;
+    let timeText = '';
+    let shipDate = new Date();
+    const dateElements = shipCard.querySelectorAll('.text-som-detail');
+    dateElements.forEach(element => {
+      const text = element.textContent.trim();
+      
+      const coversMatch = text.match(/Covers.*?(\d+h(?:\s+\d+m)?)/);
+      if (coversMatch && hours === 0) {
+        hours = parseTimeString(coversMatch[1]);
+        timeText = text;
+      }
+      
+      if (text.match(/\d+\s*(day|week|month|hour|minute)s?\s*ago/i)) {
+        shipDate = parseRelativeDate(text);
+      }
+    });
+    
+    const efficiency = hours > 0 ? calculateShellsPerHour(shells, hours) : 0;
+    const voteEstimation = hours > 0 && shells > 0 ? VoteEstimationService.estimateVotes(shells, hours) : null;
+    
+    return {
+      index: index,
+      name: shipName,
+      shells: shells,
+      hours: hours,
+      efficiency: efficiency,
+      timeText: timeText,
+      shellsText: shellsText,
+      voteEstimation: voteEstimation,
+      shipDate: shipDate,
+      timestamp: Date.now()
+    };
+    
+  } catch (error) {
+    console.error('SOM Utils: Error extracting ship data:', error);
+    return null;
+  }
+}
+
+function calculateProjectTotalEfficiency() {
+  const ships = extractAllShipsData();
+  if (ships.length === 0) return 0;
   
+  const totalShells = ships.reduce((sum, ship) => sum + ship.shells, 0);
+  const totalHours = ships.reduce((sum, ship) => sum + ship.hours, 0);
   
   return totalHours > 0 ? calculateShellsPerHour(totalShells, totalHours) : 0;
 }
@@ -1773,12 +2043,11 @@ function addProjectBannerBadge() {
   
   const badge = createCornerBadge(totalEfficiency);
   badge.className = 'som-utils-project-banner-badge som-utils-corner-badge';
-  
-  const bannerArea = document.querySelector('div[id*="ba"]') || document.querySelector('div[class*="bg-"]') || document.querySelector('header') || document.querySelector('main > div:first-child');
+  const bannerArea = document.querySelector('#ba') || document.querySelector('div[id="ba"]');
+    
   if (bannerArea) {
-    bannerArea.style.position = 'relative';
     bannerArea.appendChild(badge);
-  } 
+  }
 }
 
 function processProjectPage() {
@@ -1788,6 +2057,68 @@ function processProjectPage() {
     processProjectAIAnalysis(projectElement);
   }
   addAICheckButton();
+  addSeeGraphButton();
+  
+  const currentUrl = window.location.href;
+  const projectMatch = currentUrl.match(/\/projects\/(\d+)/);
+  if (projectMatch) {
+    const projectId = projectMatch[1];
+    const ships = extractAllShipsData();
+    if (ships.length > 0) {
+      saveShipEfficiencyData(projectId, ships);
+      addDatatoShipCards(ships);
+    }
+  }
+}
+
+function addDatatoShipCards(ships) {
+  const shipCards = document.querySelectorAll('.card-with-gradient:not(.som-enhanced)');
+  
+  shipCards.forEach((card, index) => {
+    card.classList.add('som-enhanced');
+    
+    const shipNameElement = card.querySelector('p.font-extrabold');
+    if (shipNameElement && shipNameElement.textContent.includes('Ship')) {
+      const shipName = shipNameElement.textContent.trim();
+      const ship = ships.find(s => s.name === shipName);
+      
+      if (ship && ship.efficiency > 0) {
+        const efficiencyDiv = document.createElement('div');
+        efficiencyDiv.className = 'som-ship-efficiency-display';
+        efficiencyDiv.innerHTML = `
+          <div class="som-ship-stats">
+            <span class="som-ship-stat-inline">
+              <span class="som-ship-stat-value">${ship.efficiency.toFixed(1)}</span>
+              <span class="som-ship-stat-label">s/h</span>
+            </span>
+            ${ship.voteEstimation ? `
+              <span class="som-ship-stat-inline" title="Estimated ${ship.voteEstimation.estimatedVotes} votes${ship.voteEstimation.eloRating ? `, ELO: ${ship.voteEstimation.eloRating}` : ''}">
+                <span class="som-ship-stat-value">${ship.voteEstimation.estimatedVotes}</span>
+                <span class="som-ship-stat-label">est. votes</span> 
+                 <span class="som-ship-stat-value">${ship.voteEstimation.details.eloRating}</span>
+                <span class="som-ship-stat-label">est. ELO</span> 
+              </span>
+            ` : ''}
+          </div>
+        `;
+        
+        const paragraphs = card.querySelectorAll('p');
+        let shellsParagraph = null;
+        for (const p of paragraphs) {
+          if (p.querySelector('img[alt="shell"]')) {
+            shellsParagraph = p;
+            break;
+          }
+        }
+        
+        if (shellsParagraph) {
+          shellsParagraph.parentNode.insertBefore(efficiencyDiv, shellsParagraph.nextSibling);
+        } else {
+          shipNameElement.parentNode.insertBefore(efficiencyDiv, shipNameElement.nextSibling);
+        }
+      }
+    }
+  });
 }
 
 function addAICheckButton() {
@@ -1815,7 +2146,7 @@ function addAICheckButton() {
   
   const aiCheckButton = document.createElement('button');
   aiCheckButton.className = 'som-button-primary som-ai-check-button';
-  aiCheckButton.style.cssText = 'padding: 6px 12px; font-size: 0.8rem;';
+  aiCheckButton.style.cssText = 'padding: 6px 12px; font-size: 0.8rem; height: 36px; min-width: 80px;';
   aiCheckButton.innerHTML = `
     <div class="flex items-center justify-center">
       <span>Check AI</span>
@@ -1832,6 +2163,399 @@ function addAICheckButton() {
   } else {
     buttonContainer.appendChild(aiCheckButton);
   }
+}
+
+function addSeeGraphButton() {
+  if (document.querySelector('.som-see-graph-button')) {
+    return;
+  }
+  
+  const ships = extractAllShipsData();
+  if (ships.length <= 1) {
+    return;
+  }
+  
+  let buttonContainer = document.querySelector('.flex.items-center.space-x-3.md\\:space-x-4.md\\:ml-4');
+  if (!buttonContainer) {
+    buttonContainer = document.querySelector('.flex.items-center.space-x-3');
+  }
+  if (!buttonContainer) {
+    buttonContainer = document.querySelector('.flex.items-center.gap-3');
+  }
+  if (!buttonContainer) {
+    const allButtons = document.querySelectorAll('.som-button-primary, .som-button-danger');
+    if (allButtons.length >= 2) {
+      buttonContainer = allButtons[0].parentElement;
+    }
+  }
+  
+  if (!buttonContainer) {
+    return;
+  }
+  
+  const seeGraphButton = document.createElement('button');
+  seeGraphButton.className = 'som-button-primary som-see-graph-button';
+  seeGraphButton.style.cssText = 'padding: 6px 12px; font-size: 0.8rem; height: 36px; min-width: 90px;';
+  seeGraphButton.innerHTML = `
+    <div class="flex items-center justify-center gap-1">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M3 3v18h18v-2H5V3H3zm16 7l-4-4-4 4-4-4v12h12V10z"/>
+      </svg>
+      <span>Graph</span>
+    </div>
+  `;
+
+  seeGraphButton.addEventListener('click', () => {
+    showShipEfficiencyGraph();
+  });
+  
+  const aiCheckButton = buttonContainer.querySelector('.som-ai-check-button');
+  if (aiCheckButton) {
+    buttonContainer.insertBefore(seeGraphButton, aiCheckButton.nextSibling);
+  } else {
+    const deleteButton = buttonContainer.querySelector('.som-button-danger');
+    if (deleteButton && deleteButton.parentNode === buttonContainer) {
+      buttonContainer.insertBefore(seeGraphButton, deleteButton);
+    } else {
+      buttonContainer.appendChild(seeGraphButton);
+    }
+  }
+}
+
+function loadChartJS() {
+  return new Promise((resolve, reject) => {
+    if (window.Chart) {
+      resolve();
+      return;
+    }
+    
+    const checkChart = () => {
+      if (window.Chart) {
+        resolve();
+      } else {
+        setTimeout(checkChart, 50);
+      }
+    };
+    
+    checkChart();
+    
+    setTimeout(() => {
+      if (!window.Chart) {
+        reject(new Error('Chart.js failed to load within 5 seconds'));
+      }
+    }, 5000);
+  });
+}
+
+function showShipEfficiencyGraph() {
+  const currentUrl = window.location.href;
+  const projectMatch = currentUrl.match(/\/projects\/(\d+)/);
+  if (!projectMatch) return;
+  
+  const projectId = projectMatch[1];
+  const ships = extractAllShipsData();
+  const history = getShipEfficiencyHistory(projectId);
+  
+  createGraphModal(ships, history);
+}
+
+function createGraphModal(ships, history) {
+  const existingModal = document.querySelector('.som-graph-modal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+  
+  const modal = document.createElement('div');
+  modal.className = 'som-graph-modal';
+  modal.innerHTML = `
+    <div class="som-graph-modal-content">
+      <div class="flex w-full">
+        <div>
+          <img class="-mr-[1px] max-w-none" src="https://summer.hackclub.com/assets/container/container-tl-588612b5.svg">
+        </div>
+        <img class="w-full h-[53px] -mr-[1px]" src="https://summer.hackclub.com/assets/container/container-tm-b678f005.svg">
+        <div>
+          <img class="max-w-none" src="https://summer.hackclub.com/assets/container/container-tr-0a17f012.svg">
+        </div>
+      </div>
+
+      <div class="flex -mt-[1px] relative h-full">
+        <div class="w-[46px] h-full"></div>
+        <div class="ml-[1px] h-full absolute top-0 bottom-0">
+          <img class="w-[46px] h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-ml-61c63452.svg">
+        </div>
+
+        <div class="bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA] h-full w-full flex-1">
+          <div class="som-modal-inner">
+            <div class="som-graph-header">
+              <div class="som-header-content">
+                <div class="som-header-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 3v18h18v-2H5V3H3zm16 7l-4-4-4 4-4-4v12h12V10z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="som-header-title">Ship Efficiency Graph</h3>
+                  <div class="som-header-subtitle">Performance analysis over time</div>
+                </div>
+              </div>
+              <button class="som-graph-close" onclick="this.closest('.som-graph-modal').remove()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+              </button>
+            </div>
+            
+            
+            <div class="som-graph-container">
+              <canvas id="efficiencyChart" width="800" height="400"></canvas>
+            </div>
+            
+            <div class="som-graph-stats">
+              <div class="som-stats-grid">
+                ${ships.map((ship, index) => `
+                  <div class="som-stat-item">
+                    <div class="som-stat-label" style="color: ${getShipColor(index)}">${ship.name}</div>
+                    <div class="som-stat-value">${ship.efficiency.toFixed(2)} s/h</div>
+                    ${ship.voteEstimation ? `<div class="som-stat-extra">${ship.voteEstimation.estimatedVotes} est. votes</div>` : ''}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="w-[36px] h-full"></div>
+        <div class="h-full absolute top-0 bottom-0 right-0">
+          <img class="w-[36px] h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-mr-bf6da02e.svg">
+        </div>
+      </div>
+
+      <div class="w-full flex ml-[1px]">
+        <div>
+          <img class="-mr-[1px] max-w-none" src="https://summer.hackclub.com/assets/container/container-bl-379861a1.svg">
+        </div>
+        <img class="w-full h-[54px] -mr-[1px]" src="https://summer.hackclub.com/assets/container/container-bm-6ff3aaf2.svg">
+        <div>
+          <img class="max-w-none" src="https://summer.hackclub.com/assets/container/container-br-259cfcee.svg">
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  loadChartJS().then(() => {
+    renderEfficiencyChart(ships, history);
+  }).catch(error => {
+    console.error('Failed to load Chart.js:', error);
+    modal.querySelector('.som-graph-container').innerHTML = '<p>Failed to load chart library</p>';
+  });
+}
+
+function getShipColor(index) {
+  const colors = [
+    '#3b82f6',
+    '#ef4444',
+    '#10b981',
+    '#f59e0b',
+    '#8b5cf6',
+    '#ec4899',
+    '#06b6d4',
+    '#84cc16'
+  ];
+  return colors[index % colors.length];
+}
+
+function renderEfficiencyChart(ships, history) {
+  const ctx = document.getElementById('efficiencyChart').getContext('2d');
+  
+  const sortedShips = [...ships].sort((a, b) => a.shipDate.getTime() - b.shipDate.getTime());
+  
+  const datasets = [];
+  
+  datasets.push({
+    label: 'Ship Efficiency (s/h)',
+    data: sortedShips.map(ship => ({
+      x: ship.shipDate,
+      y: ship.efficiency,
+      ship: ship
+    })),
+    borderColor: '#8B7355',
+    backgroundColor: 'rgba(139, 115, 85, 0.1)',
+    borderWidth: 3,
+    fill: false,
+    tension: 0.2,
+    pointRadius: 6,
+    pointHoverRadius: 8,
+    yAxisID: 'y'
+  });
+
+  datasets.push({
+    label: 'Vote Estimates',
+    data: sortedShips.filter(ship => ship.voteEstimation).map(ship => ({
+      x: ship.shipDate,
+      y: ship.voteEstimation.estimatedVotes,
+      ship: ship
+    })),
+    borderColor: '#4A2D24',
+    backgroundColor: 'rgba(74, 45, 36, 0.1)',
+    borderWidth: 3,
+    borderDash: [5, 5], 
+    fill: false,
+    tension: 0.2,
+    pointRadius: 6,
+    pointHoverRadius: 8,
+    yAxisID: 'y1'
+  });
+  
+  new Chart(ctx, {
+    type: 'line',
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'nearest',
+        intersect: false
+      },
+      scales: {
+        x: {
+          type: 'time',
+          time: {
+            unit: 'day',
+            displayFormats: {
+              day: 'MMM d',
+              week: 'MMM d',
+              month: 'MMM yyyy'
+            },
+            tooltipFormat: 'MMM d, yyyy'
+          },
+          title: {
+            display: true,
+            text: 'Ship Creation Date',
+            color: '#4A2D24'
+          },
+          ticks: {
+            color: '#8B7355'
+          },
+          grid: {
+            color: 'rgba(139, 115, 85, 0.2)'
+          }
+        },
+        y: {
+          type: 'linear',
+          display: true,
+          position: 'left',
+          title: {
+            display: true,
+            text: 'Efficiency (shells/hour)',
+            color: '#8B7355'
+          },
+          ticks: {
+            color: '#8B7355'
+          },
+          grid: {
+            color: 'rgba(139, 115, 85, 0.2)'
+          },
+          beginAtZero: true
+        },
+        y1: {
+          type: 'linear',
+          display: true,
+          position: 'right',
+          title: {
+            display: true,
+            text: 'Vote Estimates',
+            color: '#4A2D24'
+          },
+          ticks: {
+            color: '#4A2D24'
+          },
+          grid: {
+            drawOnChartArea: false,
+            color: 'rgba(74, 45, 36, 0.2)'
+          },
+          beginAtZero: true
+        }
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            title: function(context) {
+              const ship = context[0].raw.ship;
+              return `${ship.name} - ${ship.shipDate.toLocaleDateString()}`;
+            },
+            label: function(context) {
+              const ship = context.raw.ship;
+              const lines = [];
+              
+              if (context.dataset.label.includes('Efficiency')) {
+                lines.push(`Efficiency: ${ship.efficiency.toFixed(2)} s/h`);
+                lines.push(`Shells: ${ship.shells}, Hours: ${ship.hours.toFixed(1)}`);
+              } else if (context.dataset.label.includes('Vote')) {
+                lines.push(`Est. votes: ${ship.voteEstimation.estimatedVotes}`);
+              }
+              
+              return lines;
+            }
+          }
+        },
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            color: '#4A2D24',
+            font: {
+              size: 12,
+              weight: '600'
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+function setupGraphControls(ships, history) {
+  const chart = Chart.getChart('efficiencyChart');
+  
+  const hasHistory = history.length > 1;
+  
+  const projectTotalToggle = document.getElementById('showProjectTotal');
+  if (hasHistory && projectTotalToggle) {
+    projectTotalToggle.addEventListener('change', function() {
+      chart.data.datasets[0].hidden = !this.checked;
+      chart.update();
+    });
+  }
+  
+  document.querySelectorAll('.ship-toggle').forEach(toggle => {
+    toggle.addEventListener('change', function() {
+      const shipIndex = parseInt(this.dataset.shipIndex);
+      
+      if (hasHistory) {
+        const datasetIndex = shipIndex + 1;
+        if (chart.data.datasets[datasetIndex]) {
+          chart.data.datasets[datasetIndex].hidden = !this.checked;
+        }
+      } else {
+        const originalData = chart.data.datasets[0].ships.map(ship => ship.efficiency);
+        const originalLabels = chart.data.datasets[0].ships.map(ship => ship.name);
+        const originalColors = chart.data.datasets[0].ships.map((_, index) => getShipColor(index));
+        
+        const checkedShips = Array.from(document.querySelectorAll('.ship-toggle:checked'))
+          .map(cb => parseInt(cb.dataset.shipIndex));
+        
+        chart.data.labels = checkedShips.map(index => originalLabels[index]);
+        chart.data.datasets[0].data = checkedShips.map(index => originalData[index]);
+        chart.data.datasets[0].backgroundColor = checkedShips.map(index => originalColors[index]);
+        chart.data.datasets[0].borderColor = checkedShips.map(index => originalColors[index]);
+      }
+      
+      chart.update();
+    });
+  });
 }
 
 async function extractIndividualProjectData() {

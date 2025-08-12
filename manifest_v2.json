@@ -16,7 +16,7 @@
   "content_scripts": [
     {
       "matches": ["https://summer.hackclub.com/*"],
-      "js": ["wasm-data-url.js", "content.js"],
+      "js": ["chart.min.js", "chartjs-adapter-date-fns.bundle.min.js","wasm-data-url.js", "content.js"],
       "css": ["styles.css"]
     }
   ],

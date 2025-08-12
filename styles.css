@@ -2155,3 +2155,271 @@ input[type="file"][data-som-enhanced]:hover {
   }
 }
 
+.som-graph-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: som-modal-fade-in 0.3s ease-out;
+}
+
+@keyframes som-modal-fade-in {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+  }
+}
+
+.som-graph-modal-content {
+  padding: 0;
+  max-width: 95vw;
+  max-height: 95vh;
+  width: 1000px;
+  height: auto;
+  min-height: 700px;
+  box-shadow: 0 25px 50px -12px rgba(74, 45, 36, 0.4);
+  animation: som-modal-slide-up 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes som-modal-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(60px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.som-modal-border-top,
+.som-modal-border-bottom {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.som-modal-border-top img,
+.som-modal-border-bottom img {
+  display: block;
+  height: 53px;
+}
+
+.som-modal-inner {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  color: #4A2D24;
+}
+
+.som-graph-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(139, 115, 85, 0.3);
+}
+
+.som-header-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #4A2D24;
+  margin: 0;
+}
+
+.som-header-subtitle {
+  font-size: 0.875rem;
+  color: #8B7355;
+  margin-top: 2px;
+}
+
+.som-header-icon {
+  color: #8B7355;
+}
+
+.som-graph-close {
+  background: rgba(139, 115, 85, 0.1);
+  border: 1px solid rgba(139, 115, 85, 0.3);
+  cursor: pointer;
+  color: #8B7355;
+  padding: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.som-graph-close:hover {
+  background-color: rgba(139, 115, 85, 0.2);
+  color: #6B5B47;
+  border-color: rgba(139, 115, 85, 0.5);
+}
+
+.som-graph-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.som-graph-ship-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.som-graph-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 0.5);
+  transition: all 0.2s;
+  border: 1px solid rgba(139, 115, 85, 0.3);
+  backdrop-filter: blur(2px);
+}
+
+.som-graph-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(139, 115, 85, 0.5);
+}
+
+.som-graph-toggle input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.som-graph-toggle span {
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.som-graph-toggle small {
+  color: #6b7280;
+  font-size: 0.75rem;
+  margin-left: 4px;
+  font-weight: 400;
+}
+
+.som-graph-container {
+  height: 400px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(139, 115, 85, 0.4);
+  border-radius: 8px;
+  padding: 16px;
+  background-color: rgba(255, 255, 255, 0.9);
+  position: relative;
+  box-shadow: 0 2px 8px rgba(74, 45, 36, 0.1);
+}
+
+.som-graph-stats {
+  border-top: 1px solid rgba(139, 115, 85, 0.3);
+  padding-top: 16px;
+}
+
+.som-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.som-stat-item {
+  padding: 12px;
+  background-color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(139, 115, 85, 0.3);
+  border-radius: 8px;
+  border-left: 4px solid transparent;
+  transition: all 0.2s;
+  backdrop-filter: blur(4px);
+}
+
+.som-stat-item:hover {
+  background-color: rgba(255, 255, 255, 0.95);
+  border-color: rgba(139, 115, 85, 0.5);
+  transform: translateY(-1px);
+}
+
+.som-stat-label {
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin-bottom: 4px;
+}
+
+.som-stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.som-stat-extra {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.som-ship-efficiency-display {
+  margin: 4px 0;
+  padding: 0;
+}
+
+.som-ship-stats {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font-size: 0.875rem;
+  color: #8B7355;
+}
+
+.som-ship-stat-inline {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  cursor: default;
+}
+
+.som-ship-stat-value {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #4A2D24;
+}
+
+.som-ship-stat-label {
+  font-size: 0.75rem;
+  color: #8B7355;
+  font-weight: 500;
+}
+
+.som-button-primary, .som-button-danger {
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  height: 40px;
+  min-width: 100px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  gap: 6px;
+}
