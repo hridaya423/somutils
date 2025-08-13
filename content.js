@@ -1485,7 +1485,7 @@ function addShellsPerHourToCard(card) {
     displayElement = createSubtleText('🔍 Ship certification review', true);
   } else if (shells === 0) {
     displayElement = createSubtleText('🚀 Ship to earn shells!', true);
-  } else if (shellsPerHour >= 10) {
+  } else if (shellsPerHour > 0) {
     displayElement = createCornerBadge(shellsPerHour, efficiencyData);
     
     const cardContainer = card.querySelector('div');
@@ -1494,8 +1494,6 @@ function addShellsPerHourToCard(card) {
       cardContainer.appendChild(displayElement);
       return;
     }
-  } else if (shellsPerHour > 0) {
-    displayElement = createInlineMetric(shellsPerHour, efficiencyData);
   }
   
   if (displayElement && !displayElement.classList.contains('som-utils-corner-badge')) {
