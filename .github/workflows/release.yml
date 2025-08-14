@@ -92,7 +92,7 @@ jobs:
         mkdir -p temp-firefox-extension
         
         # Copy files for Firefox (uses manifest_v2.json renamed to manifest.json)
-        cp manifest_v2.json temp-firefox-extension/manifest.json
+        cp manifest_firefox.json temp-firefox-extension/manifest.json
         [ -f background.js ] && cp background.js temp-firefox-extension/
         [ -f content.js ] && cp content.js temp-firefox-extension/
         [ -f styles.css ] && cp styles.css temp-firefox-extension/

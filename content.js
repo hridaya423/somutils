@@ -822,7 +822,20 @@ class ProjectAIAnalyzer {
       
       const devlogElements = projectElement.querySelectorAll('[data-viewable-type="Devlog"]');
       for (const devlog of devlogElements) {
-        const devlogText = devlog.querySelector('.prose')?.textContent?.trim();
+        
+        const readMoreButton = devlog.querySelector('button[data-action*="expand"]');
+        let devlogText = '';
+        
+        if (readMoreButton) {
+          const originalHTML = devlog.innerHTML;
+          readMoreButton.click();
+          await new Promise(resolve => setTimeout(resolve, 150));
+          devlogText = devlog.querySelector('.prose')?.textContent?.trim() || '';
+          devlog.innerHTML = originalHTML;
+        } else {
+          devlogText = devlog.querySelector('.prose')?.textContent?.trim() || '';
+        }
+        
         if (devlogText) {
           data.devlogTexts.push(devlogText);
         }
@@ -895,18 +908,18 @@ class ProjectAIAnalyzer {
     const parts = [];
     
     if (projectData.description) {
-      parts.push(`Project Description:\n${projectData.description}`);
+      parts.push(projectData.description);
     }
     
     if (projectData.devlogTexts.length > 0) {
-      parts.push(`Devlog Content:\n${projectData.devlogTexts.join('\n\n')}`);
+      parts.push(projectData.devlogTexts.join('\n\n'));
     }
     
     if (projectData.readmeContent) {
       const cleanReadme = this.stripMarkdown(projectData.readmeContent);
       if (cleanReadme) {
-        parts.push(`README Content:\n${cleanReadme}`);
-      }
+        parts.push(cleanReadme);
+      } 
     }
     
     return parts.join('\n\n');
@@ -914,32 +927,17 @@ class ProjectAIAnalyzer {
   
   static async analyzeContent(content) {
     try {
-      if (!window.wasmAI.isReady()) {
-        await window.wasmAI.initialize();
-      }
-      
-      if (!window.wasmAI.isReady()) {
+      if (!window.AIDetector || !window.AIDetector.isReady()) {
         return null;
       }
       
-      let wasmResult;
-      let retryCount = 0;
-      const maxRetries = 10;
+      const result = await window.AIDetector.predict(content);
       
-      while (retryCount <= maxRetries) {
-        try {
-          wasmResult = window.wasmAI.predict(content);
-          break;
-        } catch (wasmError) {
-          retryCount++;
-          if (retryCount > maxRetries) {
-            throw wasmError;
-          }
-          await new Promise(resolve => setTimeout(resolve, 100 * retryCount));
-        }
+      if (!result) {
+        return null;
       }
       
-      let aiPercentage = wasmResult.chance_ai;
+      let aiPercentage = result.chance_ai;
       
       if (typeof aiPercentage !== 'number' || isNaN(aiPercentage)) {
         aiPercentage = 0;
@@ -951,7 +949,7 @@ class ProjectAIAnalyzer {
       
       return {
         ai_percentage: aiPercentage,
-        raw_response: wasmResult
+        raw_response: result
       };
     } catch (error) {
       return null;
@@ -1024,7 +1022,7 @@ class ProjectAIAnalyzer {
         <div class="som-tooltip-content">
           <div class="som-tooltip-stats">Project AI Detection: ${aiPercentage}%</div>
           <div class="som-tooltip-evidence">Analysis includes project description, all devlogs, and README content</div>
-          ${responseHTML ? `<div class="som-tooltip-evidence">Raw Model Response:</div>${responseHTML}` : '<div class="som-tooltip-evidence">No additional data available</div>'}
+          ${responseHTML ? `<div class="som-tooltip-evidence">Raw Model Response:</div>${responseHTML}` : `<div class="som-tooltip-evidence">Confidence: ${((analysis.raw_response?.confidence || 0.5) * 100).toFixed(0)}%</div>`}
         </div>
         <div class="som-tooltip-arrow"></div>
       </div>
@@ -1171,46 +1169,29 @@ class DevlogAIAnalyzer {
       }
       
       try {
-        if (!window.wasmAI.isReady()) {
-          await window.wasmAI.initialize();
-        }
         
-        if (!window.wasmAI.isReady()) {
+        if (!window.AIDetector || !window.AIDetector.isReady()) {;
           return null;
         }
         
-        let wasmResult;
-        let retryCount = 0;
-        const maxRetries = 10;
+        const result = await window.AIDetector.predict(content);
         
-        while (retryCount <= maxRetries) {
-          try {
-            wasmResult = window.wasmAI.predict(content);
-            break; 
-          } catch (wasmError) {
-            retryCount++;
-            if (retryCount > maxRetries) {
-              console.error(`SOM Utils: prediction failed after ${maxRetries} retries for devlog ${devlogId}`);
-              throw wasmError;
-            }
-            
-            await new Promise(resolve => setTimeout(resolve, 100 * retryCount));
-          }
+        if (!result) {
+          return null;
         }
-        
-        let aiPercentage = wasmResult.chance_ai;
+
+        let aiPercentage = result.chance_ai;
         
         if (typeof aiPercentage !== 'number' || isNaN(aiPercentage)) {
           aiPercentage = 0;
         }
-
         if (aiPercentage <= 1.0) {
           aiPercentage = aiPercentage * 100;
         }
 
         const analysis = {
           ai_percentage: aiPercentage,
-          raw_response: wasmResult
+          raw_response: result
         };
         
         return analysis;
@@ -1331,7 +1312,7 @@ class DevlogAIAnalyzer {
       <div class="som-vote-tooltip">
         <div class="som-tooltip-content">
           <div class="som-tooltip-stats">AI Detection: ${aiPercentage}%</div>
-          ${responseHTML ? `<div class="som-tooltip-evidence">Metrics:</div>${responseHTML}` : '<div class="som-tooltip-evidence">No additional data available</div>'}
+          ${responseHTML ? `<div class="som-tooltip-evidence">Metrics:</div>${responseHTML}` : `<div class="som-tooltip-evidence">Confidence: ${((analysis.raw_response?.confidence || 0.5) * 100).toFixed(0)}%</div>`}
         </div>
         <div class="som-tooltip-arrow"></div>
       </div>
@@ -2592,12 +2573,22 @@ async function extractIndividualProjectData() {
 
     const devlogCards = document.querySelectorAll('[data-viewable-type="Devlog"]');
     for (const devlogCard of devlogCards) {
-        const proseElement = devlogCard.querySelector('.prose, [data-devlog-card-target="content"]');
-        if (proseElement) {
-          const devlogText = proseElement.textContent.trim();
-          if (devlogText && devlogText.length > 10) {
-            data.devlogTexts.push(devlogText);
-          }
+        const readMoreButton = devlogCard.querySelector('button[data-action*="expand"]');
+        let devlogText = '';
+        
+        if (readMoreButton) {
+          const originalHTML = devlogCard.innerHTML;
+          readMoreButton.click();
+          await new Promise(resolve => setTimeout(resolve, 150));
+          devlogText = devlogCard.querySelector('.prose')?.textContent?.trim() || '';
+          devlogCard.innerHTML = originalHTML;
+        } else {
+          const proseElement = devlogCard.querySelector('.prose, [data-devlog-card-target="content"]');
+          devlogText = proseElement?.textContent?.trim() || '';
+        }
+        
+        if (devlogText && devlogText.length > 10) {
+          data.devlogTexts.push(devlogText);
         }
       }
     return data;
