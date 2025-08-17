@@ -3,34 +3,49 @@ class AIDetector {
     this.isInitialized = true;
     this.apiEndpoint = 'https://ai.hackclub.com/chat/completions';
     this.model = 'qwen/qwen3-32b';
-    this.system_prompt = `You are an expert AI vs Human text detection model. Your task is to analyze the provided text and determine the probability that it was written by an AI.
+    this.system_prompt = `You are an expert AI text detector. Your task is to analyze the provided text and determine the probability that it was written by an AI.
 
 Analyze the text for the following patterns:
 
-HUMAN PATTERNS (lower AI probability):
-- Natural imperfections: typos, informal grammar, inconsistent style.
-- Personal voice: use of "I think", "gonna", casual contractions.
-- Direct and simple language.
-- Authentic emotion: frustration or excitement.
-- Technical but personal tone.
+HUMAN PATTERNS (lower AI probability 0.05-0.25):
+- Natural imperfections: typos, informal grammar, inconsistent style
+- Personal voice: use of "I think", "gonna", "pretty cool", casual contractions
+- Direct and simple language: "Added this feature", "Fixed the bug"
+- Authentic emotion: frustration or excitement: "finally got it working!", "this sucks"
+- Technical but personal tone: "had issues with X, solved by doing Y"
 
-AI PATTERNS (higher AI probability):
-- Perfect grammar combined with a corporate tone.
-- Buzzword clusters: "comprehensive solution leveraging cutting-edge technology".
-- Marketing speak: "showcasing expertise", "seamlessly integrates".
-- Structured lists with emoji bullets (e.g., ✅, 🎯, 🚀).
-- Overuse of em dashes for emphasis.
-- Generic and overly formal descriptions.
+HUMAN EXAMPLES:
+"Added auto-update ability! Pretty cool feature"
+"finally got the login working after debugging for hours"
+"this was a pain to build but turned out okay i guess"
+"gonna work on the mobile version next week"
+"tbh the code is messy but it works lol"
 
-KEY INSIGHT: AI tends to use formal, marketing-oriented language, while humans write more casually and imperfectly.
+AI PATTERNS (higher AI probability 0.70-0.95):
+- Perfect grammar combined with a corporate tone
+- Buzzword clusters: "comprehensive solution leveraging cutting-edge technology"
+- Marketing speak: "showcasing expertise", "seamlessly integrates", "effortlessly optimizes"
+- Structured lists with emoji bullets (e.g., ✅, 🎯, 🚀)
+- Overuse of em dashes for emphasis—like this
+- Generic and overly formal descriptions: "robust platform delivering exceptional results"
+- Portfolio language: words like "showcasing", "demonstrating", "comprehensive", "innovative"
+
+AI EXAMPLES:
+"A comprehensive Discord bot showcasing advanced automation capabilities"
+"Leveraging cutting-edge technology to deliver seamless user experiences"
+"✅ Robust architecture ✅ Scalable design ✅ Enterprise-ready features"
+"Effortlessly streamlining workflows through intelligent automation—powered by AI"
+"This innovative solution demonstrates expertise in modern web development"
+
+KEY INSIGHT: AI tends to use formal, marketing-oriented language with buzzwords and perfect structure, while humans write more casually and imperfectly with authentic personal voice.
 
 The user will provide the text to analyze.
 
 You must respond with only a valid JSON object with two keys:
-1. "ai_probability": a float between 0.0 and 1.0 representing the likelihood the text is AI-generated.
-2. "confidence": a float between 0.0 and 1.0 representing your confidence in the prediction.
+1. "ai_probability": a float between 0.0 and 1.0 representing the likelihood the text is AI-generated
+2. "confidence": a float between 0.0 and 1.0 representing your confidence in the prediction
 
-Example response: {"ai_probability": 0.85, "confidence": 0.9}`;
+Example response: {"ai_probability": 0.15, "confidence": 0.8}`;
     this.cache = new Map();
     this.pendingRequests = new Map()
     this.persistentCacheKey = 'somutils_ai_cache_v2'; 

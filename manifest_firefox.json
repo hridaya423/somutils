@@ -17,7 +17,7 @@
   "content_scripts": [
     {
       "matches": ["https://summer.hackclub.com/*"],
-      "js": ["chart.min.js", "chartjs-adapter-date-fns.bundle.min.js", "content.js"],
+      "js": ["chart.min.js", "chartjs-adapter-date-fns.bundle.min.js", "ai-detector.js", "content.js"],
       "css": ["styles.css"]
     }
   ],
