@@ -181,6 +181,72 @@ function calculateShellsPerHour(shells, hours) {
   return shells / hours;
 }
 
+function getProjectOwner() {
+  const allElements = document.querySelectorAll('*');
+  for (const element of allElements) {
+    if (element.textContent && element.textContent.trim() === 'Created by') {
+      const parent = element.parentElement;
+      if (parent) {
+        const usernameLink = parent.querySelector('a[href^="/users/"] span');
+        if (usernameLink) {
+          return usernameLink.textContent.trim();
+        }
+      }
+    }
+  }
+  
+  const fontExtraboldSpans = document.querySelectorAll('span.font-extrabold');
+  for (const span of fontExtraboldSpans) {
+    const usernameLink = span.querySelector('a[href^="/users/"] span');
+    if (usernameLink) {
+      const parentText = span.parentElement ? span.parentElement.textContent : '';
+      if (parentText.includes('Created by')) {
+        return usernameLink.textContent.trim();
+      }
+    }
+  }
+  
+  const projectHeaders = document.querySelectorAll('.flex.items-center, .mb-4, .text-som-dark');
+  for (const header of projectHeaders) {
+    if (header.textContent && header.textContent.includes('Created by')) {
+      const usernameLink = header.querySelector('a[href^="/users/"] span');
+      if (usernameLink) {
+        return usernameLink.textContent.trim();
+      }
+    }
+  }
+  return null;
+}
+
+function isProjectOwnedByCurrentUser() {
+  const currentUser = getCurrentUsername();
+  const projectOwner = getProjectOwner();
+  
+  if (!currentUser || !projectOwner) {
+    return false;
+  }
+  
+  return currentUser === projectOwner;
+}
+
+function cleanupContaminatedData() {
+  try {
+    const data = JSON.parse(localStorage.getItem('som-utils-ship-efficiency') || '{"projects": {}}');
+    
+    for (const projectData of Object.values(data.projects || {})) {
+      if (projectData.history?.some(entry => 
+        entry.ships?.some(ship => ship.hasOwnProperty('name'))
+      )) {
+        localStorage.removeItem('som-utils-ship-efficiency');
+        return;
+      }
+    }
+  } catch (error) {
+    console.error('SOM Utils: Error during data cleanup:', error);
+    localStorage.removeItem('som-utils-ship-efficiency');
+  }
+}
+
 function getShipDataForProject(projectId) {
   try {
     const data = JSON.parse(localStorage.getItem('som-utils-ship-efficiency') || '{"projects": {}}');
@@ -326,6 +392,10 @@ function getUserAverageEfficiencyFromShipData() {
 }
 
 function saveShipEfficiencyData(projectId, shipsData) {
+  if (!isProjectOwnedByCurrentUser()) {
+    return;
+  }
+  
   let data;
   try {
     data = JSON.parse(localStorage.getItem('som-utils-ship-efficiency') || '{"projects": {}}');
@@ -333,24 +403,75 @@ function saveShipEfficiencyData(projectId, shipsData) {
     data = { projects: {} };
   }
   
+  if (data.projects[projectId] && data.projects[projectId].history.length > 0) {
+    const lastEntry = data.projects[projectId].history[data.projects[projectId].history.length - 1];
+    const currentDataString = JSON.stringify(shipsData.map(ship => ({
+      index: ship.index,
+      shells: ship.shells,
+      hours: ship.hours,
+      efficiency: ship.efficiency,
+      estimated_votes: ship.voteEstimation?.estimatedVotes || 0,
+      estimated_elo: ship.voteEstimation?.details?.eloRating || 0
+    })));
+    const lastDataString = JSON.stringify(lastEntry.ships.map(ship => ({
+      index: ship.index,
+      shells: ship.shells,
+      hours: ship.hours,
+      efficiency: ship.efficiency,
+      estimated_votes: ship.estimated_votes || 0,
+      estimated_elo: ship.estimated_elo || 0
+    })));
+    
+    if (currentDataString === lastDataString) {
+      return;
+    }
+  }
+  
   if (!data.projects[projectId]) {
-    data.projects[projectId] = { history: [] };
+    data.projects[projectId] = { 
+      history: [],
+      title: null,
+      description: null
+    };
+  }
+  
+  const currentPath = window.location.pathname;
+  if (currentPath.match(/\/projects\/\d+/)) {
+    const titleElement = document.querySelector('.flex.flex-col.md\\:flex-row.md\\:items-center.mb-4 h1') || 
+                         document.querySelector('h1.text-2xl, h1.text-3xl') ||
+                         document.querySelector('h1');
+    const title = titleElement?.textContent?.trim();
+    
+    const descriptionElement = document.querySelector('.mb-4.text-base.md\\:text-lg p') ||
+                               document.querySelector('.text-base.md\\:text-lg p') ||
+                               document.querySelector('p[class*="mb-4"]:not([class*="text-gray"])');
+    const description = descriptionElement?.textContent?.trim();
+    
+    if (title && title !== 'Current Project') {
+      data.projects[projectId].title = title;
+    }
+    
+    if (description) {
+      data.projects[projectId].description = description;
+    }
   }
   
   const timestamp = Date.now();
   const historyEntry = {
     timestamp: timestamp,
     ships: shipsData.map(ship => ({
-      name: ship.name,
+      index: ship.index,
       shells: ship.shells,
       hours: ship.hours,
       efficiency: ship.efficiency,
-      voteEstimation: ship.voteEstimation
+      estimated_votes: ship.voteEstimation?.estimatedVotes || 0,
+      estimated_elo: ship.voteEstimation?.details?.eloRating || 0
     })),
     projectTotal: {
       shells: shipsData.reduce((sum, ship) => sum + ship.shells, 0),
       hours: shipsData.reduce((sum, ship) => sum + ship.hours, 0),
-      efficiency: calculateProjectTotalEfficiency()
+      efficiency: calculateProjectTotalEfficiency(),
+      shells_per_hour: calculateProjectTotalEfficiency()
     }
   };
   
@@ -361,6 +482,118 @@ function saveShipEfficiencyData(projectId, shipsData) {
   }
   
   localStorage.setItem('som-utils-ship-efficiency', JSON.stringify(data));
+}
+
+function saveProjectMetadataOnly(projectId) {
+  try {
+    const currentPath = window.location.pathname;
+    if (!currentPath.match(/\/projects\/\d+/)) {
+      return;
+    }
+    
+    if (!isProjectOwnedByCurrentUser()) {
+      return;
+    }
+
+    let data;
+    try {
+      data = JSON.parse(localStorage.getItem('som-utils-ship-efficiency') || '{"projects": {}}');
+    } catch (error) {
+      data = { projects: {} };
+    }
+
+    if (!data.projects[projectId]) {
+      data.projects[projectId] = { 
+        history: [],
+        title: null,
+        description: null
+      };
+    }
+
+    const titleElement = document.querySelector('.flex.flex-col.md\\:flex-row.md\\:items-center.mb-4 h1') || 
+                         document.querySelector('h1.text-2xl, h1.text-3xl') ||
+                         document.querySelector('h1');
+    const title = titleElement?.textContent?.trim();
+    
+    const descriptionElement = document.querySelector('.mb-4.text-base.md\\:text-lg p') ||
+                               document.querySelector('.text-base.md\\:text-lg p') ||
+                               document.querySelector('p[class*="mb-4"]:not([class*="text-gray"])');
+    const description = descriptionElement?.textContent?.trim();
+    
+    if (title && title !== 'Current Project') {
+      data.projects[projectId].title = title;
+    }
+    
+    if (description) {
+      data.projects[projectId].description = description;
+    }
+
+    localStorage.setItem('som-utils-ship-efficiency', JSON.stringify(data));
+  } catch (error) {
+    console.warn('SOM AI: Error saving project metadata:', error);
+  }
+}
+
+function saveMyProjectsData() {
+  try {
+    const projectCards = document.querySelectorAll('.card-with-gradient, [class*="project"]');
+    
+    projectCards.forEach(card => {
+      const projectLink = card.querySelector('a[href*="/projects/"]');
+      if (!projectLink) return;
+      
+      const projectIdMatch = projectLink.href.match(/\/projects\/(\d+)/);
+      if (!projectIdMatch) return;
+      
+      const projectId = projectIdMatch[1];
+      const titleElement = card.querySelector('h2, h3, .text-xl, .text-2xl') || 
+                          card.querySelector('[class*="title"]');
+      const title = titleElement?.textContent?.trim();
+      const descElement = card.querySelector('p, .text-gray-600, [class*="description"]');
+      const description = descElement?.textContent?.trim();
+      const timeElement = card.querySelector('[class*="time"], [class*="hour"]');
+      const timeSpent = timeElement?.textContent?.trim();
+      const shellElement = card.querySelector('[class*="shell"]');
+      const shellsText = shellElement?.textContent?.trim();
+      const shellsMatch = shellsText?.match(/(\d+)/);
+      const shells = shellsMatch ? parseInt(shellsMatch[1]) : 0;
+      
+      if (title) {
+        let data;
+        try {
+          data = JSON.parse(localStorage.getItem('som-utils-ship-efficiency') || '{"projects": {}}');
+        } catch (error) {
+          data = { projects: {} };
+        }
+        
+        if (!data.projects[projectId]) {
+          data.projects[projectId] = { 
+            history: [],
+            title: null,
+            description: null
+          };
+        }
+        
+        data.projects[projectId].title = title;
+        if (description && description !== title) {
+          data.projects[projectId].description = description;
+        }
+        
+        if (timeSpent || shells > 0) {
+          data.projects[projectId].my_projects_data = {
+            time_spent: timeSpent,
+            shells_visible: shells,
+            last_seen: new Date().toISOString()
+          };
+        }
+        
+        localStorage.setItem('som-utils-ship-efficiency', JSON.stringify(data));
+      }
+    });
+    
+  } catch (error) {
+    console.warn('SOM AI: Error saving my_projects data:', error);
+  }
 }
 
 function getShipEfficiencyHistory(projectId) {
@@ -451,6 +684,7 @@ function getCurrentUsername() {
         if (usernameLink) {
           const username = usernameLink.textContent.trim();
           if (username && username.length > 0 && username.length < 50) {
+            localStorage.setItem('som-utils-current-username', username);
             return username;
           }
         }
@@ -459,6 +693,7 @@ function getCurrentUsername() {
         if (usernameDiv) {
           const username = usernameDiv.textContent.trim();
           if (username && username.length > 0 && username.length < 50) {
+            localStorage.setItem('som-utils-current-username', username);
             return username;
           }
         }
@@ -472,6 +707,7 @@ function getCurrentUsername() {
               !text.includes('payout') && !text.includes('hour') &&
               !text.includes('/hr') && !text.includes('%') &&
               !text.includes('efficiency') && !text.includes('ml-1')) {
+            localStorage.setItem('som-utils-current-username', text);
             return text;
           }
         }
@@ -479,7 +715,8 @@ function getCurrentUsername() {
     }
   }
   
-  return null;
+  const storedUsername = localStorage.getItem('som-utils-current-username');
+  return storedUsername || null;
 }
 
 
@@ -1985,7 +2222,6 @@ function extractIndividualShipData(shipCard, index) {
     
     return {
       index: index,
-      name: shipName,
       shells: shells,
       hours: hours,
       efficiency: efficiency,
@@ -2042,11 +2278,16 @@ function processProjectPage() {
   const projectMatch = currentUrl.match(/\/projects\/(\d+)/);
   if (projectMatch) {
     const projectId = projectMatch[1];
+    saveProjectMetadataOnly(projectId);
+    
     const ships = extractAllShipsData();
     if (ships.length > 0) {
       saveShipEfficiencyData(projectId, ships);
       addDatatoShipCards(ships);
     }
+  }
+  if (currentUrl.includes('/my_projects')) {
+    saveMyProjectsData();
   }
 }
 
@@ -2058,8 +2299,7 @@ function addDatatoShipCards(ships) {
     
     const shipNameElement = card.querySelector('p.font-extrabold');
     if (shipNameElement && shipNameElement.textContent.includes('Ship')) {
-      const shipName = shipNameElement.textContent.trim();
-      const ship = ships.find(s => s.name === shipName);
+      const ship = ships.find(s => s.index === index);
       
       if (ship && ship.efficiency > 0) {
         const efficiencyDiv = document.createElement('div');
@@ -2098,6 +2338,909 @@ function addDatatoShipCards(ships) {
       }
     }
   });
+}
+
+function addAIAssistantNavigation() {
+  if (document.querySelector('.som-ai-assistant-nav')) {
+    return;
+  }
+  
+  const navList = document.querySelector('nav.flex.items-center ul.space-y-1');
+  if (!navList) {
+    return;
+  }
+
+  const aiNavItem = document.createElement('li');
+  aiNavItem.className = 'flex justify-start som-ai-assistant-nav';
+  
+  aiNavItem.innerHTML = `
+    <button class="relative inline-block group py-2 cursor-pointer text-2xl w-full text-left" type="button">
+      <span class="som-link-content som-link-push">
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" class="w-8 mr-4 h-8">
+          <path fill="#4A2D24" d="M8 12C6.9 12 6 12.9 6 14V42C6 43.1 6.9 44 8 44H12L18 50L24 44H56C57.1 44 58 43.1 58 42V14C58 12.9 57.1 12 56 12H8ZM12 20V22H52V20H12ZM12 26V28H52V26H12ZM12 32V34H44V32H12Z"/>
+        </svg>
+        <span class="text-nowrap tracking-tight pointer-events-none text-3xl transition-opacity duration-200" data-sidebar-target="collapseFade">
+          Chatbot
+        </span>
+      </span>
+      <div class="absolute transition-all duration-150 bottom-1 pr-3 box-content bg-som-highlight rounded-full z-0 group-hover:opacity-100 h-6 opacity-0 w-full" data-kind="underline" data-sidebar-target="underline"></div>
+    </button>
+  `;
+  
+  const button = aiNavItem.querySelector('button');
+  button.addEventListener('click', () => {
+    activateAIAssistant();
+  });
+  
+  const adminItem = navList.querySelector('li.border-2.border-dashed.border-orange-500');
+  if (adminItem) {
+    navList.insertBefore(aiNavItem, adminItem);
+  } else {
+    navList.appendChild(aiNavItem);
+  }
+}
+
+function activateAIAssistant() {
+  createAIAssistantModal();
+}
+
+function createAIAssistantModal() {
+  const existingModal = document.querySelector('.som-graph-modal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+  
+  const modal = document.createElement('div');
+  modal.className = 'som-graph-modal';
+  modal.innerHTML = createAIAssistantModalContent();
+  
+  document.body.appendChild(modal);
+  
+  initializeChatInterface();
+}
+
+function createAIAssistantModalContent() {
+  return `
+    <div class="som-graph-modal-content" style="
+      width: 1040px;
+      max-width: 98vw;
+      height: 680px;
+      max-height: 95vh;
+    ">
+      <div class="flex w-full">
+        <div>
+          <img class="-mr-[1px] max-w-none" src="https://summer.hackclub.com/assets/container/container-tl-588612b5.svg">
+        </div>
+        <img class="w-full h-[53px] -mr-[1px]" src="https://summer.hackclub.com/assets/container/container-tm-b678f005.svg">
+        <div>
+          <img class="max-w-none" src="https://summer.hackclub.com/assets/container/container-tr-0a17f012.svg">
+        </div>
+      </div>
+
+      <div class="flex -mt-[1px] relative h-full">
+        <div class="w-[46px] h-full"></div>
+        <div class="ml-[1px] h-full absolute top-0 bottom-0">
+          <img class="w-[46px] h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-ml-61c63452.svg">
+        </div>
+
+        <div class="bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA] h-full w-full flex-1">
+          <div class="som-modal-inner som-modal-container">
+            <div class="som-graph-header som-modal-header">
+              <div class="som-header-content">
+                <div class="som-header-icon">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M4 4C3.4 4 3 4.4 3 5V15C3 15.6 3.4 16 4 16H8L12 20L16 16H20C20.6 16 21 15.6 21 15V5C21 4.4 20.6 4 20 4H4ZM6 7V8H18V7H6ZM6 10V11H18V10H6ZM6 13V14H15V13H6Z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="som-header-title som-modal-title">Chatbot</h3>
+                  <div class="som-header-subtitle som-modal-subtitle">AI assistant for SOM</div>
+                </div>
+              </div>
+              <button class="som-ai-close-btn som-graph-close">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+              </button>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="som-ai-quick-actions" style="margin-bottom: 4px;">
+              <div class="som-ai-quick-grid">
+                <button class="som-ai-quick-card" data-action="analyze-projects">
+                  <div class="som-ai-quick-content">
+                    <span class="som-ai-quick-icon">📊</span>
+                    <span class="som-ai-quick-text">Analyze Projects</span>
+                  </div>
+                </button>
+                
+                <button class="som-ai-quick-card" data-action="improve-performance">
+                  <div class="som-ai-quick-content">
+                    <span class="som-ai-quick-icon">🚀</span>
+                    <span class="som-ai-quick-text">Improve Performance</span>
+                  </div>
+                </button>
+                
+                <button class="som-ai-quick-card" data-action="project-ideas">
+                  <div class="som-ai-quick-content">
+                    <span class="som-ai-quick-icon">💡</span>
+                    <span class="som-ai-quick-text">Project Ideas</span>
+                  </div>
+                </button>
+                
+              
+              </div>
+            </div>
+
+            <!-- Chat Messages -->
+            <div class="som-ai-messages" id="som-ai-messages">
+              <div class="som-ai-welcome-message">
+                <div class="som-ai-welcome-content">
+                  <div class="som-ai-welcome-avatar">
+                    <span class="som-ai-welcome-avatar-icon">🤖</span>
+                  </div>
+                  <div>
+                    <h4 class="som-ai-welcome-title">Welcome to your SOM Chatbot!</h4>
+                    <p class="som-ai-welcome-text">
+                      I have access to your project data and performance metrics. Ask me anything about improving your projects or building better projects!
+                    </p>
+                   
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="som-ai-input-container">
+              <textarea 
+                id="som-ai-input" 
+                class="som-ai-input"
+                placeholder="Ask me about your projects, voting strategy, or get personalized advice..."
+                rows="1"
+              ></textarea>
+              <button id="som-ai-send-btn" class="som-ai-send-btn">
+                <span>Send</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="w-[36px] h-full"></div>
+        <div class="h-full absolute top-0 bottom-0 right-0">
+          <img class="w-[36px] h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-mr-bf6da02e.svg">
+        </div>
+      </div>
+
+      <div class="w-full flex ml-[1px]">
+        <div>
+          <img class="-mr-[1px] max-w-none" src="https://summer.hackclub.com/assets/container/container-bl-379861a1.svg">
+        </div>
+        <img class="w-full h-[54px] -mr-[1px]" src="https://summer.hackclub.com/assets/container/container-bm-6ff3aaf2.svg">
+        <div>
+          <img class="max-w-none" src="https://summer.hackclub.com/assets/container/container-br-259cfcee.svg">
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function initializeChatInterface() {
+  const closeBtn = document.querySelector('.som-ai-close-btn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      const modal = document.querySelector('.som-graph-modal');
+      if (modal) {
+        modal.remove();
+      }
+    });
+  }
+  
+  const sendBtn = document.getElementById('som-ai-send-btn');
+  const input = document.getElementById('som-ai-input');
+  
+  if (sendBtn && input) {
+    sendBtn.addEventListener('click', () => {
+      sendMessage();
+    });
+    
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+    
+    input.addEventListener('input', () => {
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    });
+  }
+  
+  const quickBtns = document.querySelectorAll('.som-ai-quick-card');
+  quickBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = btn.getAttribute('data-action');
+      handleQuickAction(action);
+    });
+    
+    btn.addEventListener('mouseenter', () => {
+      btn.style.transform = 'translateY(-2px)';
+      btn.style.boxShadow = '0 4px 16px rgba(74, 45, 36, 0.12)';
+    });
+    
+    btn.addEventListener('mouseleave', () => {
+      btn.style.transform = 'translateY(0)';
+      btn.style.boxShadow = '0 2px 8px rgba(74, 45, 36, 0.08)';
+    });
+  });
+  
+}
+
+
+async function sendMessage() {
+  const input = document.getElementById('som-ai-input');
+  const sendBtn = document.getElementById('som-ai-send-btn');
+  const message = input.value.trim();
+  
+  if (!message) return;
+  input.disabled = true;
+  sendBtn.disabled = true;
+  
+  input.value = '';
+  input.style.height = 'auto';
+  addMessageToChat('user', message);
+  const skeletonMessage = addSkeletonMessage();
+  const skeletonTimeout = setTimeout(() => {
+    if (skeletonMessage && skeletonMessage.parentNode) {
+      skeletonMessage.remove();
+    }
+  }, 5000);
+  
+  try {
+    const userContext = await collectUserContext();
+    const aiResponse = await sendToAI(message, userContext);
+    
+    clearTimeout(skeletonTimeout);
+    if (skeletonMessage && skeletonMessage.parentNode) {
+      skeletonMessage.remove();
+    }
+    
+    const cursor = document.querySelector('.som-ai-cursor');
+    if (cursor) {
+      cursor.remove();
+    }
+    
+  } catch (error) {
+    clearTimeout(skeletonTimeout);
+    if (skeletonMessage && skeletonMessage.parentNode) {
+      skeletonMessage.remove();
+    }
+    
+    const streamingMessage = document.querySelector('.som-ai-message:last-child');
+    if (streamingMessage && streamingMessage.querySelector('.som-ai-streaming')) {
+      streamingMessage.remove();
+    }
+    
+    addMessageToChat('assistant', "Sorry, I encountered an error. Please try again or check your connection.");
+  } finally {
+    input.disabled = false;
+    sendBtn.disabled = false;
+    input.focus();
+  }
+}
+
+function addMessageToChat(sender, content) {
+  const messagesContainer = document.getElementById('som-ai-messages');
+  if (!messagesContainer) return;
+  
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `som-ai-message som-ai-message-${sender}`;
+  
+  const isUser = sender === 'user';
+  
+  const lineHeightClass = getLineHeightClass(content);
+  
+  messageDiv.style.cssText = `
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    ${isUser ? 'flex-direction: row-reverse;' : ''}
+  `;
+  
+  if (isUser) {
+    messageDiv.innerHTML = `
+      <div class="som-message-avatar som-message-avatar-user">👤</div>
+      <div class="som-message-bubble-user ${lineHeightClass}">
+        ${content}
+      </div>
+    `;
+  } else {
+    messageDiv.innerHTML = `
+      <div class="som-message-avatar som-message-avatar-assistant">🤖</div>
+      <div class="som-message-bubble-assistant ${lineHeightClass}">
+        ${formatAIResponse(content)}
+      </div>
+    `;
+  }
+  
+  messagesContainer.appendChild(messageDiv);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function getLineHeightClass(content) {
+  const length = content.length;
+  if (length < 50) return 'som-message-short';
+  if (length < 150) return 'som-message-medium';
+  return 'som-message-long';
+}
+
+function addSkeletonMessage() {
+  const messagesContainer = document.getElementById('som-ai-messages');
+  if (!messagesContainer) return null;
+  
+  const messageDiv = document.createElement('div');
+  messageDiv.className = 'som-ai-message som-ai-skeleton-message';
+  messageDiv.style.cssText = `
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  `;
+  
+  messageDiv.innerHTML = `
+    <div class="som-message-avatar som-message-avatar-assistant">🤖</div>
+    <div class="som-skeleton-bubble">
+      <div class="som-skeleton-line"></div>
+      <div class="som-skeleton-line"></div>
+      <div class="som-skeleton-line"></div>
+    </div>
+  `;
+  
+  messagesContainer.appendChild(messageDiv);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  
+  return messageDiv;
+}
+
+
+function formatAIResponse(content) {
+  return content
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`(.*?)`/g, '<code class="som-inline-code">$1</code>')
+    .replace(/\n\n/g, '</p><p class="som-text-paragraph-spaced">')
+    .replace(/\n/g, '<br>')
+    .replace(/^/, '<p class="som-text-paragraph">')
+    .replace(/$/, '</p>')
+    .replace(/<p class="som-text-paragraph"><\/p><p class="som-text-paragraph-spaced">/g, '<p class="som-text-paragraph">')
+    .replace(/(<\/p>)(<p class="som-text-paragraph-spaced">)/g, '$1$2');
+}
+
+function handleQuickAction(action) {
+  const messages = {
+    'analyze-projects': "Analyze my project performance and tell me what's working best. Include shell earnings and which types of projects perform better for me.",
+    'improve-performance': "How can I improve my project performance to get more votes and shells? Give me specific actionable advice based on my current projects.",
+    'project-ideas': "Suggest new project ideas that would likely perform well for me, based on my successful projects and current SOM trends."
+  };
+  
+  const message = messages[action];
+  if (message) {
+    const input = document.getElementById('som-ai-input');
+    if (input) {
+      input.value = message;
+      sendMessage();
+    }
+  }
+}
+
+async function collectUserContext() {
+  const projects = await getUserProjects();
+  const context = {
+    user_profile: await getUserProfile(),
+    projects: projects,
+    performance_metrics: await getPerformanceMetrics(),
+    recent_activity: await getRecentActivity(),
+    timestamp: new Date().toISOString()
+  };
+  
+  return context;
+}
+
+async function getUserProfile() {
+  try {
+    return {
+      username: extractUsernameFromPage(),
+      current_shells: extractShellCount(),
+      som_status: 'active'
+    };
+  } catch (error) {
+    console.warn('SOM AI: Error getting user profile:', error);
+    return {};
+  }
+}
+
+async function getUserProjects() {
+  try {
+    const projects = [];
+    
+    const currentProject = await getCurrentProjectData();
+    if (currentProject) {
+      projects.push(currentProject);
+    }
+    
+    const efficiencyData = JSON.parse(localStorage.getItem('som-utils-ship-efficiency') || '{"projects": {}}');
+    
+    Object.entries(efficiencyData.projects || {}).forEach(([projectId, data]) => {
+      if (data.history && data.history.length > 0) {
+        const latestHistory = data.history[data.history.length - 1];
+        
+        projects.push({
+          id: projectId,
+          title: data.title || `Project ${projectId}`,
+          description: data.description || '',
+          shells_earned: latestHistory.projectTotal?.shells || 0,
+          hours_logged: latestHistory.projectTotal?.hours || 0,
+          efficiency: latestHistory.projectTotal?.efficiency || 0,
+          ships_count: latestHistory.ships?.length || 0,
+          last_updated: latestHistory.timestamp,
+          url: `https://summer.hackclub.com/projects/${projectId}`
+        });
+      }
+    });
+    
+    return projects.slice(0, 10);
+  } catch (error) {
+    return [];
+  }
+}
+
+
+async function getCurrentProjectData() {
+  const currentPath = window.location.pathname;
+  if (!currentPath.match(/\/projects\/\d+/)) {
+    return null;
+  }
+  
+  try {
+    const titleElement = document.querySelector('.flex.flex-col.md\\:flex-row.md\\:items-center.mb-4 h1') || 
+                         document.querySelector('h1.text-2xl, h1.text-3xl') ||
+                         document.querySelector('h1');
+    const title = titleElement?.textContent?.trim() || 'Current Project';
+    
+    const descriptionElement = document.querySelector('.mb-4.text-base.md\\:text-lg p') ||
+                               document.querySelector('.text-base.md\\:text-lg p') ||
+                               document.querySelector('p[class*="mb-4"]:not([class*="text-gray"])');
+    const description = descriptionElement?.textContent?.trim() || '';
+    
+    const projectIdMatch = currentPath.match(/\/projects\/(\d+)/);
+    const projectId = projectIdMatch ? projectIdMatch[1] : null;
+    
+    const followersElement = document.querySelector('button[data-modal-type="follower"] span');
+    const followers = followersElement ? parseInt(followersElement.textContent.replace(/\D/g, '')) || 0 : 0;
+    
+    const devlogsElement = document.querySelector('.flex.items-center.gap-2:nth-child(2) span');
+    const devlogs = devlogsElement ? parseInt(devlogsElement.textContent.replace(/\D/g, '')) || 0 : 0;
+    
+    const timeElement = document.querySelector('.flex.items-center.gap-2:nth-child(3) span');
+    const timeSpent = timeElement?.textContent?.trim() || '';
+    
+    const certified = document.querySelector('button[data-modal-type="certification"]') !== null;
+    
+    return {
+      id: projectId,
+      title: title,
+      description: description,
+      url: window.location.href,
+      vote_count: extractVoteCount(),
+      followers: followers,
+      devlog_count: devlogs,
+      time_spent: timeSpent,
+      ship_certified: certified,
+      is_current: true
+    };
+  } catch (error) {
+    console.warn('SOM AI: Error extracting current project data:', error);
+    return null;
+  }
+}
+
+async function getPerformanceMetrics() {
+  try {
+    const efficiencyData = JSON.parse(localStorage.getItem('som-utils-ship-efficiency') || '{"projects": {}}');
+    const projects = Object.values(efficiencyData.projects || {});
+    
+    let totalShells = 0;
+    let totalHours = 0;
+    let totalProjects = projects.length;
+    let averageEfficiency = 0;
+    
+    projects.forEach(project => {
+      if (project.history && project.history.length > 0) {
+        const latest = project.history[project.history.length - 1];
+        totalShells += latest.projectTotal?.shells || 0;
+        totalHours += latest.projectTotal?.hours || 0;
+        averageEfficiency += latest.projectTotal?.efficiency || 0;
+      }
+    });
+    
+    averageEfficiency = totalProjects > 0 ? averageEfficiency / totalProjects : 0;
+    
+    return {
+      total_shells_earned: extractShellCount() || totalShells,
+      total_hours_logged: totalHours,
+      total_projects: totalProjects,
+      average_efficiency: averageEfficiency,
+      shells_per_hour: totalHours > 0 ? totalShells / totalHours : 0,
+      current_project_votes: extractVoteCount(),
+      best_project_efficiency: Math.max(...projects.map(p => 
+        p.history?.[p.history.length - 1]?.projectTotal?.efficiency || 0
+      )),
+      recent_activity_level: projects.filter(p => {
+        const lastUpdate = p.history?.[p.history.length - 1]?.timestamp;
+        return lastUpdate && new Date(lastUpdate) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      }).length
+    };
+  } catch (error) {
+    console.warn('SOM AI: Error calculating performance metrics:', error);
+    return {
+      total_shells_earned: extractShellCount(),
+      current_project_votes: extractVoteCount()
+    };
+  }
+}
+
+async function getRecentActivity() {
+  try {
+    return {
+      current_page: window.location.pathname,
+      last_update: new Date().toISOString()
+    };
+  } catch (error) {
+    return {};
+  }
+}
+
+async function sendToAI(message, userContext) {
+  const systemPrompt = `You are a personalized SOM (Summer of Making) AI assistant for Hack Club's Summer of Making program.
+
+## SUMMER OF MAKING COMPLETE FAQ:
+
+### How Summer of Making Works:
+Summer of Making is a Hack Club event where you build and ship projects to earn "shells" (virtual currency) which you can spend in a shop for real prizes. Projects compete in head-to-head matchups where community members vote, and you earn shells based on how well your projects perform.
+
+### Participation Requirements:
+- You must be 18 years old or under to participate
+- You need to verify your identity through Hack Club's system using government-issued ID
+- Track your coding time using Hackatime (connects to WakaTime extensions in your code editor)
+- Only time logged starting from June 16th counts
+
+### How to Earn Prizes:
+When you ship your projects, they go into head-to-head matchups where community members will vote on projects and you'll earn shells depending on how well your projects do!
+
+### Project Requirements:
+- You can work on any type of project including websites, apps, hardware, games, etc
+- You need to make frequent commits to show your work progress
+- Old projects are allowed but only new time counts from June 16th
+- Team projects are allowed but each person needs their own commits and repository
+- You need to provide a demo link (hosted website, downloadable executable, video for hardware)
+
+### What Makes a Valid Ship:
+Projects need 3 essential parts:
+1. **Repository**: All code + good README.md with description, demo info, technologies used
+2. **Demo**: Deployed/published version others can easily try (not just code to run locally)
+3. **Image**: Shows your project in action (first thing voters see)
+
+Projects CANNOT be:
+- For school assignments
+- Paid work
+- Closed source
+- 1:1 replicas of tutorials (must remix and make it your own)
+
+### Demo Link Requirements by Project Type:
+- **Hardware projects**: You can use a video demo of a project you've built IRL (or a demo of the PCB/CAD/firmware if you haven't)
+- **Websites** (and anything on a server): You need to host it and make it available to everyone. Try Nest server for any project or GitHub Pages for static sites (both are free!)
+- **Downloadable/native/CLI software**: Compile/package it to an executable (like PyInstaller for Python) and post it with something like releases on GitHub, or publish it on an appropriate package registry (like PyPI and npm)
+
+### Devlog System:
+- You must write 1 devlog for every 10 hours of work
+- Devlogs are like journal entries explaining what you worked on, what works, what doesn't, and what still needs to be done
+- They help verify your project is real and provide storytelling for voters
+- Having a timeline of work helps verify your project as being real and not fraudulent
+
+### Shell System and Voting:
+- Ships go into voting matchups where community members choose winners
+- Better performance in voting means more shells earned
+- Your shells are "escrowed" until you vote 20 times for every project you ship
+- This is mandatory - if we didn't have this requirement, then nobody would vote!
+- Once you meet the voting requirement (votes >= ships * 20), shells become spendable in the shop
+- You can check your escrowed shells in the sidebar and how many times you need to vote on the Vote page
+
+### Event Timeline:
+- Summer of Making ends August 31st, unless we can save the island from sinking by devlogging and shipping projects (then it will end a month later on September 30th)
+- All pending payouts will be paid out before SoM ends
+- Make sure to spend your shells before the shop closes (Hack Club won't transfer currency!)
+- The Balloon Brigade: Starting right now, all new devlog and shipped project authors will be mailed real balloons to help pull the "sinking" island up!
+
+### Project Certification:
+- Manual review of all projects to help ensure fraud doesn't occur
+- May take a while for your project to be verified, especially on weekends
+- Voting more places your projects higher in the ship certification queue
+- If your project gets rejected, click "No ship certification" to see the reason, fix the issue, then click "Request Re-certification"
+
+### Black Market:
+- Unlike the shop, the black market (or Heidimarket) is an invite-only store where you can buy cooler stuff for less shells
+- To get invited, make cool projects, post about it in descriptive devlogs and #summer-of-making, and hope that an admin adds you
+
+## Your Role:
+- Help users build shippable, high-quality projects that will perform well in voting
+- Give specific advice based on their actual project data and performance
+- Focus on project quality, innovation, technical implementation, and presentation
+- Help with shipping strategy (README writing, demo deployment, etc.)
+
+## Important Notes:
+- Respond in plain text (no markdown formatting)
+- Reference their actual projects by name when possible
+- Focus on actionable advice for building and shipping better projects
+- Emphasize the importance of good READMEs and demos for voting success
+
+## User's Current Data:
+${JSON.stringify(userContext, null, 2)}
+
+Be encouraging, specific, and actionable. Keep responses concise but helpful.`;
+
+  try {
+    const response = await fetch('https://ai.hackclub.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
+            role: 'user',
+            content: message
+          }
+        ],
+        model: 'qwen/qwen3-32b',
+        temperature: 0.7,
+        max_completion_tokens: 1000,
+        stream: true,
+        include_reasoning: false
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    return await handleStreamingResponse(response);
+
+  } catch (error) {
+    console.error('SOM AI: Error calling HackClub AI:', error);
+    throw error;
+  }
+}
+
+async function handleStreamingResponse(response) {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let fullContent = '';
+  let displayedContent = '';
+  let contentBuffer = '';
+  
+  const activeMessage = document.querySelector('.som-ai-message:last-child .som-ai-streaming');
+  let messageContent = activeMessage || null;
+  
+  if (!messageContent) {
+    addStreamingMessageToChat();
+    messageContent = document.querySelector('.som-ai-message:last-child .som-ai-streaming');
+  }
+  
+  const streamText = () => {
+    if (contentBuffer.length > 0) {
+      const chunkSize = Math.min(Math.floor(Math.random() * 5) + 2, contentBuffer.length);
+      const chunk = contentBuffer.slice(0, chunkSize);
+      contentBuffer = contentBuffer.slice(chunkSize);
+      
+      displayedContent += chunk;
+      
+      if (messageContent) {
+        const formattedContent = formatStreamingContent(displayedContent);
+        messageContent.innerHTML = formattedContent;
+        const messagesContainer = document.getElementById('som-ai-messages');
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+      }
+      
+      setTimeout(streamText, Math.random() * 15 + 8);
+    }
+  };
+  
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      
+      if (done) break;
+      
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n');
+      
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          
+          if (data === '[DONE]') {
+            if (contentBuffer.length > 0) {
+              displayedContent += contentBuffer;
+              contentBuffer = '';
+              if (messageContent) {
+                const formattedContent = formatStreamingContent(displayedContent);
+                messageContent.innerHTML = formattedContent;
+              }
+            }
+            return fullContent;
+          }
+          
+          try {
+            const parsed = JSON.parse(data);
+            const content = parsed.choices?.[0]?.delta?.content;
+            
+            if (content) {
+              fullContent += content;
+              contentBuffer += content;
+              if (contentBuffer.length === content.length) {
+                streamText();
+              }
+            }
+          } catch (e) { 
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('SOM AI: Streaming error:', error);
+    throw error;
+  }
+  
+  return fullContent;
+}
+
+function formatStreamingContent(content) {
+  return content
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`(.*?)`/g, '<code class="som-inline-code">$1</code>')
+    .replace(/\n\n/g, '</p><p class="som-text-paragraph-spaced">')
+    .replace(/\n/g, '<br>')
+    .replace(/^/, '<p class="som-text-paragraph">')
+    .replace(/$/, '</p>')  
+    .replace(/<p class="som-text-paragraph"><\/p><p class="som-text-paragraph-spaced">/g, '<p class="som-text-paragraph">')
+    .replace(/(<\/p>)(<p class="som-text-paragraph-spaced">)/g, '$1$2');
+}
+
+function addStreamingMessageToChat() {
+  const messagesContainer = document.getElementById('som-ai-messages');
+  if (!messagesContainer) return;
+  
+  const messageDiv = document.createElement('div');
+  messageDiv.className = 'som-ai-message som-ai-message-assistant';
+  
+  messageDiv.style.cssText = `
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  `;
+  
+  messageDiv.innerHTML = `
+    <div class="som-streaming-avatar">
+      <span>🤖</span>
+    </div>
+    <div class="som-streaming-bubble">
+      <span class="som-ai-streaming som-streaming-text"></span>
+      <span class="som-ai-cursor som-streaming-cursor">|</span>
+    </div>
+  `;
+  
+  if (!document.querySelector('#som-streaming-animations')) {
+    const style = document.createElement('style');
+    style.id = 'som-streaming-animations';
+    style.textContent = `
+      @keyframes blink {
+        0%, 40% { opacity: 1; }
+        50%, 90% { opacity: 0; }
+        100% { opacity: 1; }
+      }
+      
+      .som-ai-streaming {
+        transition: all 0.1s ease-out;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  messagesContainer.appendChild(messageDiv);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+
+function extractUsernameFromPage() {
+  const selectors = [
+    '.user-name', '.username', 
+    'h1[data-sidebar-target="userName"]',
+    '.text-3xl.font-bold',
+    '[data-sidebar-target="userName"]'
+  ];
+  
+  for (const selector of selectors) {
+    const element = document.querySelector(selector);
+    if (element && element.textContent.trim()) {
+      return element.textContent.trim();
+    }
+  }
+  
+  return 'SOM User';
+}
+
+function extractShellCount() {
+  const shellImages = document.querySelectorAll('img[src*="shell"], img[alt*="shell"]');
+  
+  for (const img of shellImages) {
+    const container = img.closest('div, span, picture');
+    if (container) {
+      const nextElement = container.nextElementSibling || container.parentElement?.querySelector('.font-extrabold, .font-bold');
+      if (nextElement) {
+        const shellText = nextElement.textContent.trim();
+        const shellMatch = shellText.match(/(\d+(?:\.\d+)?)/);
+        if (shellMatch) {
+          return parseFloat(shellMatch[1]);
+        }
+      }
+    }
+  }
+  
+  const storedShells = localStorage.getItem('som-utils-current-shells');
+  return storedShells ? parseFloat(storedShells) : 0;
+}
+
+function extractVoteCount() {
+  const voteSelectors = [
+    '.vote-count', '[data-vote-count]',
+    'button[data-controller*="vote"] span',
+    '.flex.items-center.space-x-1 span.font-semibold'
+  ];
+  
+  for (const selector of voteSelectors) {
+    const element = document.querySelector(selector);
+    if (element) {
+      const voteText = element.textContent.trim();
+      const voteMatch = voteText.match(/(\d+)/);
+      if (voteMatch) {
+        return parseInt(voteMatch[1]);
+      }
+    }
+  }
+  
+  const voteButtons = document.querySelectorAll('button[data-controller*="vote"], .vote-button');
+  for (const button of voteButtons) {
+    const voteSpan = button.querySelector('span.font-semibold, span.font-bold');
+    if (voteSpan) {
+      const voteMatch = voteSpan.textContent.match(/(\d+)/);
+      if (voteMatch) {
+        return parseInt(voteMatch[1]);
+      }
+    }
+  }
+  
+  return 0;
 }
 
 function addAICheckButton() {
@@ -4186,6 +5329,8 @@ function processCurrentPage() {
     return;
   }
   
+  addAIAssistantNavigation();
+  
   lastProcessTime = now;
   isProcessing = true;
   
@@ -4228,6 +5373,7 @@ function processCurrentPage() {
     isProcessing = false;
   }
 }
+cleanupContaminatedData();
 
 document.addEventListener('DOMContentLoaded', processCurrentPage);
 
