@@ -328,11 +328,6 @@ function saveUserEfficiency(shells, hours) {
 }
 
 function getUserAverageEfficiency() {
-  const accurateEfficiency = getUserAverageEfficiencyFromShipData();
-  if (accurateEfficiency !== null && accurateEfficiency > 0) {
-    return accurateEfficiency;
-  }
-  
   let data;
   try {
     data = JSON.parse(localStorage.getItem('som-utils-efficiency') || '{"projects": []}');
@@ -343,25 +338,26 @@ function getUserAverageEfficiency() {
   
   if (!data.projects || data.projects.length === 0) return null;
   
-  let totalShells = 0;
-  let totalHours = 0;
+  let projectEfficiencies = [];
   
   data.projects.forEach(project => {
-    totalShells += project.shells;
-    totalHours += project.hours;
+    if (project.shells > 0 && project.hours > 0) {
+      const projectEfficiency = calculateShellsPerHour(project.shells, project.hours);
+      projectEfficiencies.push(projectEfficiency);
+    }
   });
   
-  const fallbackEfficiency = totalHours > 0 ? calculateShellsPerHour(totalShells, totalHours) : null;
-  return fallbackEfficiency && fallbackEfficiency > 0 ? fallbackEfficiency : null;
+  if (projectEfficiencies.length === 0) return null;
+  
+  const averageEfficiency = projectEfficiencies.reduce((sum, eff) => sum + eff, 0) / projectEfficiencies.length;
+  return averageEfficiency > 0 ? averageEfficiency : null;
 }
 
 function getUserAverageEfficiencyFromShipData() {
   try {
     const shipData = JSON.parse(localStorage.getItem('som-utils-ship-efficiency') || '{"projects": {}}');
     
-    let totalShippedShells = 0;
-    let totalShippedHours = 0;
-    let projectsWithShips = 0;
+    let projectEfficiencies = [];
     
     Object.keys(shipData.projects).forEach(projectId => {
       const projectData = shipData.projects[projectId];
@@ -372,19 +368,19 @@ function getUserAverageEfficiencyFromShipData() {
           const projectHours = latestEntry.ships.reduce((sum, ship) => sum + ship.hours, 0);
           
           if (projectShells > 0 && projectHours > 0) {
-            totalShippedShells += projectShells;
-            totalShippedHours += projectHours;
-            projectsWithShips++;
+            const projectEfficiency = calculateShellsPerHour(projectShells, projectHours);
+            projectEfficiencies.push(projectEfficiency);
           }
         }
       }
     });
     
-    if (projectsWithShips === 0 || totalShippedHours === 0) {
+    if (projectEfficiencies.length === 0) {
       return null;
     }
     
-    return calculateShellsPerHour(totalShippedShells, totalShippedHours);
+    const averageEfficiency = projectEfficiencies.reduce((sum, eff) => sum + eff, 0) / projectEfficiencies.length;
+    return averageEfficiency;
     
   } catch (error) {
     return null;
@@ -4236,13 +4232,13 @@ function extractBlackMarketItemData(shopItemRow) {
   if (buttonElement) {
     const buttonText = buttonElement.textContent.trim();
     
-    let costMatch = buttonText.match(/Buy for\s*(\d+)/i);
+    let costMatch = buttonText.match(/Buy for\s*([\d,]+)/i);
     if (costMatch) {
-      shellCost = parseInt(costMatch[1]);
+      shellCost = parseInt(costMatch[1].replace(/,/g, ''));
     } else {
-      costMatch = buttonText.match(/(\d+)\s*needed/i);
+      costMatch = buttonText.match(/([\d,]+)\s*needed/i);
       if (costMatch) {
-        const needed = parseInt(costMatch[1]);
+        const needed = parseInt(costMatch[1].replace(/,/g, ''));
         const currentShells = getCurrentUserShells();
         shellCost = needed + currentShells;
       }
