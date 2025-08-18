@@ -70,6 +70,7 @@ jobs:
         [ -f icon128.png ] && cp icon128.png temp-chrome-extension/
         [ -f PrivacyPolicy.md ] && cp PrivacyPolicy.md temp-chrome-extension/
         [ -f wasm-data-url.js ] && cp wasm-data-url.js temp-chrome-extension/
+        [ -f ai-detector.js ] && cp ai-detector.js temp-chrome-extension/
         [ -f wasm_base64.txt ] && cp wasm_base64.txt temp-chrome-extension/
         [ -f chart.min.js ] && cp chart.min.js temp-chrome-extension/
         [ -f chartjs-adapter-date-fns.bundle.min.js ] && cp chartjs-adapter-date-fns.bundle.min.js temp-chrome-extension/
@@ -102,6 +103,7 @@ jobs:
         [ -f PrivacyPolicy.md ] && cp PrivacyPolicy.md temp-firefox-extension/
         [ -f wasm-data-url.js ] && cp wasm-data-url.js temp-firefox-extension/
         [ -f wasm_base64.txt ] && cp wasm_base64.txt temp-firefox-extension/
+        [ -f ai-detector.js ] && cp ai-detector.js temp-firefox-extension/
         [ -f chart.min.js ] && cp chart.min.js temp-firefox-extension/
         [ -f chartjs-adapter-date-fns.bundle.min.js ] && cp chartjs-adapter-date-fns.bundle.min.js temp-firefox-extension/
         
