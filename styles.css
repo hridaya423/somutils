@@ -1536,6 +1536,51 @@ input[type="file"][data-som-enhanced]:hover {
   }
 }
 
+.som-button-primary {
+  --bg-color: #FFE8CD;
+  --bg-disabled-color: #b8a795;
+  --fg-color: var(--color-som-dark, #4A2D24);
+  --hover-color: #ffe4c4;
+  --click-color: #f0d9be;
+  
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background-color: var(--bg-color);
+  color: var(--fg-color);
+  border: 1px solid rgba(74, 45, 36, 0.2);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+  box-sizing: border-box;
+  min-height: 40px;
+}
+
+.som-button-primary:hover {
+  background-color: var(--hover-color);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(74, 45, 36, 0.1);
+}
+
+.som-button-primary:active {
+  background-color: var(--click-color);
+  transform: translateY(0);
+}
+
+.som-button-primary:disabled {
+  background-color: var(--bg-disabled-color);
+  color: rgba(74, 45, 36, 0.6);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .som-goal-button-container {
   display: flex;
   flex-direction: row;

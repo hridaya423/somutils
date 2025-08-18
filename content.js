@@ -1307,8 +1307,10 @@ class ProjectAIAnalyzer {
       const minutesPerDevlog = Math.round(hoursPerDevlog * 60);
       displayText = `1 devlog per ${minutesPerDevlog}m`;
     } else {
-      const roundedHours = Math.round(hoursPerDevlog * 10) / 10;
-      displayText = `1 devlog per ${roundedHours}h`;
+      const wholeHours = Math.floor(hoursPerDevlog);
+      const minutes = Math.round((hoursPerDevlog - wholeHours) * 60);
+      const timeFormatted = minutes > 0 ? `${wholeHours}h ${minutes}m` : `${wholeHours}h`;
+      displayText = `1 devlog per ${timeFormatted}`;
     }
     
     badge.textContent = displayText;
@@ -1820,12 +1822,14 @@ function createTotalStatsBox(stats) {
       const minutesPerDevlog = Math.round(hoursPerDevlog * 60);
       displayText = `1 devlog per ${minutesPerDevlog}m`;
     } else {
-      const roundedHours = Math.round(hoursPerDevlog * 10) / 10;
-      displayText = `1 devlog per ${roundedHours}h`;
+      const wholeHours = Math.floor(hoursPerDevlog);
+      const minutes = Math.round((hoursPerDevlog - wholeHours) * 60);
+      const timeFormatted = minutes > 0 ? `${wholeHours}h ${minutes}m` : `${wholeHours}h`;
+      displayText = `1 devlog per ${timeFormatted}`;
     }
   statsBox.innerHTML = `
     <div class="som-stats-compact">
-      <span class="som-stats-text">Total: ${stats.totalHours}h • ${stats.totalDevlogs} devlogs • ${displayText}</span>
+      <span class="som-stats-text">Total: ${Math.floor(stats.totalHours)}h ${Math.round((stats.totalHours - Math.floor(stats.totalHours)) * 60) > 0 ? Math.round((stats.totalHours - Math.floor(stats.totalHours)) * 60) + 'm' : ''} • ${stats.totalDevlogs} devlogs • ${displayText}</span>
     </div>
   `;
   return statsBox;
@@ -2261,6 +2265,95 @@ function addProjectBannerBadge() {
   }
 }
 
+function enhanceProjectStats() {
+  const statsContainer = document.querySelector('.flex.gap-3.flex-wrap.items-center.space-x-2.mb-1');
+  if (!statsContainer) return;
+  
+  if (statsContainer.parentNode.querySelector('.som-enhanced-stats-container')) return;
+  
+  try {
+    const ships = extractAllShipsData();
+    if (ships.length === 0) return; 
+    const totalShells = ships.reduce((sum, ship) => sum + ship.shells, 0);
+    const totalShippedHours = ships.reduce((sum, ship) => sum + ship.hours, 0);
+    const efficiency = totalShippedHours > 0 ? calculateShellsPerHour(totalShells, totalShippedHours) : 0;
+    
+    if (totalShells === 0 || totalShippedHours === 0) return;
+    const voteEstimation = VoteEstimationService.estimateVotes(totalShells, totalShippedHours);
+    const votes = voteEstimation.estimatedVotes;
+    const allStatsElements = document.querySelectorAll('.flex.gap-3.flex-wrap.items-center.space-x-2.mb-1 .flex.items-center.gap-2 span');
+    let devlogCount = 0;
+    
+    for (const element of allStatsElements) {
+      const text = element.textContent.trim();
+      const devlogsMatch = text.match(/(\d+)\s*devlogs?/);
+      if (devlogsMatch) {
+        devlogCount = parseInt(devlogsMatch[1]);
+        break;
+      }
+    }
+    
+    const ELO = voteEstimation.details?.eloRating || VoteEstimationService.BASE_RATING;
+    const newStatsContainer = document.createElement('div');
+    newStatsContainer.className = 'flex gap-3 flex-wrap items-center space-x-2 mb-1 ml-2 text-sm md:text-base 2xl:text-lg text-som-dark som-enhanced-stats-container';
+
+    const eloStat = document.createElement('div');
+    eloStat.className = 'flex items-center gap-2';
+    eloStat.innerHTML = `<span class="text-som-dark">~${Math.round(ELO)} ELO</span>`;
+    
+    const votesStat = document.createElement('div');
+    votesStat.className = 'flex items-center gap-2';
+    votesStat.innerHTML = `<span class="text-som-dark">~${Math.round(votes)} votes</span>`;
+    
+    const efficiencyStat = document.createElement('div');
+    efficiencyStat.className = 'flex items-center gap-2';
+    efficiencyStat.innerHTML = `<span class="text-som-dark">${efficiency.toFixed(1)} s/h</span>`;
+    
+    const shippedTimeStat = document.createElement('div');
+    shippedTimeStat.className = 'flex items-center gap-2';
+    
+    const wholeHours = Math.floor(totalShippedHours);
+    const minutes = Math.round((totalShippedHours - wholeHours) * 60);
+    const shippedTimeFormatted = minutes > 0 ? `${wholeHours}h ${minutes}m` : `${wholeHours}h`;
+    
+    shippedTimeStat.innerHTML = `<span class="text-som-dark">${shippedTimeFormatted} shipped</span>`;
+    
+    const hoursPerDevlog = devlogCount > 0 ? totalShippedHours / devlogCount : 0;
+    let devlogDisplayText = '';
+    
+    if (hoursPerDevlog < 1 && hoursPerDevlog > 0) {
+      const minutesPerDevlog = Math.round(hoursPerDevlog * 60);
+      devlogDisplayText = `1 devlog per ${minutesPerDevlog}m`;
+    } else if (hoursPerDevlog > 0) {
+      const wholeHours = Math.floor(hoursPerDevlog);
+      const minutes = Math.round((hoursPerDevlog - wholeHours) * 60);
+      const timeFormatted = minutes > 0 ? `${wholeHours}h ${minutes}m` : `${wholeHours}h`;
+      devlogDisplayText = `1 devlog per ${timeFormatted}`;
+    } else {
+      devlogDisplayText = 'No devlog data';
+    }
+    
+    const devlogRateStat = document.createElement('div');
+    devlogRateStat.className = 'flex items-center gap-2';
+    devlogRateStat.innerHTML = `<span class="text-som-dark">${devlogDisplayText}</span>`;
+    
+    newStatsContainer.appendChild(eloStat);
+    newStatsContainer.appendChild(document.createTextNode('•\u00A0'));
+    newStatsContainer.appendChild(votesStat);
+    newStatsContainer.appendChild(document.createTextNode('•\u00A0'));
+    newStatsContainer.appendChild(efficiencyStat);
+    newStatsContainer.appendChild(document.createTextNode('•\u00A0'));
+    newStatsContainer.appendChild(shippedTimeStat);
+    newStatsContainer.appendChild(document.createTextNode('•\u00A0'));
+    newStatsContainer.appendChild(devlogRateStat);
+    
+    statsContainer.parentNode.insertBefore(newStatsContainer, statsContainer.nextSibling);
+    
+  } catch (error) {
+    console.error('SOM Utils: Error enhancing project stats:', error);
+  }
+}
+
 function processProjectPage() {
   addProjectBannerBadge();
   const projectElement = document.querySelector('[data-project-index]');
@@ -2269,6 +2362,7 @@ function processProjectPage() {
   }
   addAICheckButton();
   addSeeGraphButton();
+  enhanceProjectStats();
   
   const currentUrl = window.location.href;
   const projectMatch = currentUrl.match(/\/projects\/(\d+)/);
