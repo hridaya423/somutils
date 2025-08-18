@@ -2162,11 +2162,15 @@ function addProjectSortInterface(projectCards, projectData) {
 function extractAllShipsData() {
   const ships = [];
   const shipCards = document.querySelectorAll('.card-with-gradient');
+  let shipIndex = 0;
   
-  shipCards.forEach((shipCard, index) => {
-    const shipData = extractIndividualShipData(shipCard, index);
+  shipCards.forEach((shipCard, cardIndex) => {
+    const shipData = extractIndividualShipData(shipCard, cardIndex);
     if (shipData && shipData.shells > 0) {
+      shipData.index = shipIndex;
+      shipData.name = `Ship ${shipIndex + 1}`;
       ships.push(shipData);
+      shipIndex++;
     }
   });
   
@@ -2222,6 +2226,7 @@ function extractIndividualShipData(shipCard, index) {
     
     return {
       index: index,
+      name: `Ship ${index + 1}`,
       shells: shells,
       hours: hours,
       efficiency: efficiency,
@@ -2383,15 +2388,18 @@ function processProjectPage() {
 
 function addDatatoShipCards(ships) {
   const shipCards = document.querySelectorAll('.card-with-gradient:not(.som-enhanced)');
+  let shipDataIndex = 0;
   
-  shipCards.forEach((card, index) => {
-    card.classList.add('som-enhanced');
-    
+  shipCards.forEach((card, cardIndex) => {
     const shipNameElement = card.querySelector('p.font-extrabold');
     if (shipNameElement && shipNameElement.textContent.includes('Ship')) {
-      const ship = ships.find(s => s.index === index);
+      card.classList.add('som-enhanced', 'som-ship-card');
       
-      if (ship && ship.efficiency > 0) {
+      const ship = ships[shipDataIndex];
+      if (ship) {
+        shipDataIndex++;
+        
+        if (ship.efficiency > 0) {
         const efficiencyDiv = document.createElement('div');
         efficiencyDiv.className = 'som-ship-efficiency-display';
         efficiencyDiv.innerHTML = `
@@ -2425,7 +2433,10 @@ function addDatatoShipCards(ships) {
         } else {
           shipNameElement.parentNode.insertBefore(efficiencyDiv, shipNameElement.nextSibling);
         }
+        }
       }
+    } else {
+      card.classList.add('som-enhanced');
     }
   });
 }
@@ -4078,7 +4089,6 @@ function updateShopTimeEstimate(card) {
   const shellsNeeded = Math.max(0, shellCost - currentShells);
   const totalHours = shellCost / averageEfficiency;
   const hoursNeeded = shellsNeeded / averageEfficiency;
-  
   
   const timeEstimateElement = card.querySelector('.text-xs.text-gray-500.text-center');
   if (timeEstimateElement && timeEstimateElement.textContent.includes('on an average project')) {

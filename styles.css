@@ -1581,6 +1581,87 @@ input[type="file"][data-som-enhanced]:hover {
   box-shadow: none;
 }
 
+.som-ship-card {
+  border: 2px solid rgba(74, 45, 36, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(74, 45, 36, 0.12) !important;
+  transition: all 0.3s ease !important;
+  background: linear-gradient(135deg, rgba(246, 219, 186, 0.95) 0%, rgba(230, 212, 190, 0.95) 100%) !important;
+}
+
+.som-ship-card:hover {
+  border-color: rgba(74, 45, 36, 0.5) !important;
+  box-shadow: 0 8px 24px rgba(74, 45, 36, 0.2) !important;
+  transform: translateY(-3px) !important;
+  background: linear-gradient(135deg, rgba(246, 219, 186, 1) 0%, rgba(230, 212, 190, 1) 100%) !important;
+}
+
+.som-ship-efficiency-display {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(74, 45, 36, 0.08);
+  border: 1px solid rgba(74, 45, 36, 0.2);
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.som-ship-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.som-ship-stat-inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.som-ship-stat-value {
+  font-weight: 600;
+  color: #4A2D24;
+}
+
+.som-ship-stat-label {
+  font-size: 0.75rem;
+  color: #8B7355;
+  font-weight: 500;
+}
+
+.som-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.som-stat-item {
+  background: rgba(74, 45, 36, 0.05);
+  border: 1px solid rgba(74, 45, 36, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+}
+
+.som-stat-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.som-stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #4A2D24;
+  margin-bottom: 2px;
+}
+
+.som-stat-extra {
+  font-size: 0.75rem;
+  color: #8B7355;
+  font-weight: 500;
+}
+
 .som-goal-button-container {
   display: flex;
   flex-direction: row;
