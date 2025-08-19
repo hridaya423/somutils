@@ -2213,9 +2213,18 @@ function extractAllShipsData() {
   shipCards.forEach((shipCard, domIndex) => {
     const shipData = extractIndividualShipData(shipCard, domIndex);
     if (shipData && shipData.shells > 0) {
-      shipData.filteredIndex = ships.length;
       ships.push(shipData);
     }
+  });
+  
+  ships.sort((a, b) => {
+    const aNum = parseInt(a.originalName.match(/Ship (\d+)/)?.[1] || '0');
+    const bNum = parseInt(b.originalName.match(/Ship (\d+)/)?.[1] || '0');
+    return aNum - bNum;
+  });
+  
+  ships.forEach((ship, index) => {
+    ship.filteredIndex = index;
   });
   
   return ships;
