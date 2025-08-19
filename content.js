@@ -247,6 +247,59 @@ function cleanupContaminatedData() {
   }
 }
 
+function cleanupContaminatedEfficiencyData() {
+  try {
+    const oldData = JSON.parse(localStorage.getItem('som-utils-efficiency') || '{"projects": []}');
+    if (oldData.projects && oldData.projects.length > 0) {
+      const efficiencies = oldData.projects.map(p => p.shells > 0 && p.hours > 0 ? calculateShellsPerHour(p.shells, p.hours) : 0);
+      const uniqueEfficiencies = [...new Set(efficiencies.map(e => Math.round(e * 10) / 10))];
+      
+      if (efficiencies.length >= 3 && uniqueEfficiencies.length === 1) {
+        localStorage.removeItem('som-utils-efficiency');
+      }
+    }
+    
+    const newData = JSON.parse(localStorage.getItem('som-utils-efficiency') || '{"projects": []}');
+    if (newData.projects && newData.projects.length > 0) {
+      let cleaned = false;
+      
+      newData.projects = newData.projects.filter(project => {
+        if (!project.projectId || project.shells <= 0 || project.hours <= 0) {
+          cleaned = true;
+          return false;
+        }
+        return true;
+      });
+      
+      const seenProjects = new Map();
+      newData.projects = newData.projects.filter(project => {
+        const key = project.projectId;
+        if (seenProjects.has(key)) {
+          const existing = seenProjects.get(key);
+          if (project.timestamp > existing.timestamp) {
+            seenProjects.set(key, project);
+            cleaned = true;
+            return true;
+          } else {
+            cleaned = true;
+            return false;
+          }
+        } else {
+          seenProjects.set(key, project);
+          return true;
+        }
+      });
+      
+      if (cleaned) {
+        localStorage.setItem('som-utils-efficiency', JSON.stringify(newData));
+      }
+    }
+    
+  } catch (error) {
+    localStorage.removeItem('som-utils-efficiency');
+  }
+}
+
 function getShipDataForProject(projectId) {
   try {
     const data = JSON.parse(localStorage.getItem('som-utils-ship-efficiency') || '{"projects": {}}');
@@ -284,47 +337,54 @@ function calculateAccurateEfficiency(projectId, fallbackShells, fallbackHours) {
       efficiency: accuracy,
       shells: shipData.shippedShells,
       hours: shipData.shippedHours,
-      isAccurate: true,
-      source: 'ship_data'
+      projectId: projectId
     };
   } else {
-    const fallbackEfficiency = calculateShellsPerHour(fallbackShells, fallbackHours);
-    return {
-      efficiency: fallbackEfficiency,
-      shells: fallbackShells,
-      hours: fallbackHours,
-      isAccurate: false,
-      source: 'total_time'
-    };
+    return null;
   }
 }
 
-function saveUserEfficiency(shells, hours) {
-  console.log('SOM Utils: Saving efficiency data - Shells:', shells, 'Hours:', hours);
-  
-  let data;
-  try {
-    data = JSON.parse(localStorage.getItem('som-utils-efficiency') || '{"projects": []}');
-  } catch (error) {
-    console.error('SOM Utils: Error parsing existing efficiency data:', error);
-    data = {"projects": []};
+function saveUserEfficiency(shells, hours, projectId = null) {
+  if (!projectId) {
+    const currentProjectMatch = window.location.href.match(/\/projects\/(\d+)/);
+    projectId = currentProjectMatch ? currentProjectMatch[1] : null;
   }
   
-  const existingProject = data.projects.find(project => 
-    Math.abs(project.shells - shells) < 0.001 && Math.abs(project.hours - hours) < 0.001
-  );
   
-  if (existingProject) {
-    return;
+  if (projectId && shells > 0 && hours > 0) {
+    let data;
+    try {
+      data = JSON.parse(localStorage.getItem('som-utils-efficiency') || '{"projects": []}');
+    } catch (error) {
+      console.error('SOM Utils: Error parsing existing efficiency data:', error);
+      data = {"projects": []};
+    }
+    
+    const existingProject = data.projects.find(project => 
+      project.projectId === projectId ||
+      (Math.abs(project.shells - shells) < 0.001 && Math.abs(project.hours - hours) < 0.001)
+    );
+    
+    if (existingProject) {
+      existingProject.shells = shells;
+      existingProject.hours = hours;
+      existingProject.projectId = projectId;
+      existingProject.timestamp = Date.now();
+    } else {
+      data.projects.push({ 
+        shells, 
+        hours, 
+        projectId: projectId,
+        timestamp: Date.now() 
+      });
+    }
+    
+    if (data.projects.length > 20) {
+      data.projects = data.projects.slice(-20);
+    }
+    
+    localStorage.setItem('som-utils-efficiency', JSON.stringify(data));
   }
-  
-  data.projects.push({ shells, hours, timestamp: Date.now() });
-  
-  if (data.projects.length > 20) {
-    data.projects = data.projects.slice(-20);
-  }
-  
-  localStorage.setItem('som-utils-efficiency', JSON.stringify(data));
 }
 
 function getUserAverageEfficiency() {
@@ -902,13 +962,6 @@ function createCornerBadge(shellsPerHour, efficiencyData = null) {
   badge.className = 'som-utils-corner-badge';
   
   let tooltip = `${shellsPerHour.toFixed(1)} shells per hour`;
-  if (efficiencyData) {
-    if (efficiencyData.isAccurate) {
-      tooltip += ` (based on ${efficiencyData.hours.toFixed(1)}h shipped work)`;
-    } else {
-      tooltip += ` (estimated from total project time)`;
-    }
-  }
   
   badge.title = tooltip;
   badge.innerHTML = `
@@ -922,13 +975,6 @@ function createInlineMetric(shellsPerHour, efficiencyData = null) {
   metric.className = 'som-utils-inline-metric';
   
   let tooltip = `${shellsPerHour.toFixed(1)} shells per hour`;
-  if (efficiencyData) {
-    if (efficiencyData.isAccurate) {
-      tooltip += ` (based on ${efficiencyData.hours.toFixed(1)}h shipped work)`;
-    } else {
-      tooltip += ` (estimated from total project time)`;
-    }
-  }
   
   metric.title = tooltip;
   metric.innerHTML = `
@@ -1663,20 +1709,21 @@ function addShellsPerHourToCard(card) {
   let efficiencyData;
   if (projectId) {
     efficiencyData = calculateAccurateEfficiency(projectId, shells, totalHours);
+    if (!efficiencyData) {
+      return;
+    }
   } else {
     efficiencyData = {
       efficiency: calculateShellsPerHour(shells, totalHours),
       shells: shells,
-      hours: totalHours,
-      isAccurate: false,
-      source: 'total_time'
+      hours: totalHours
     };
   }
   
   const shellsPerHour = efficiencyData.efficiency;
   
   if (shells > 0 && efficiencyData.hours > 0) {
-    saveUserEfficiency(shells, efficiencyData.hours);
+    saveUserEfficiency(shells, efficiencyData.hours, projectId);
     const voteEstimation = VoteEstimationService.estimateVotes(shells, efficiencyData.hours);
     if (voteEstimation.estimatedVotes > 0) {
       const voteDisplay = createVoteEstimateDisplay(voteEstimation.estimatedVotes, voteEstimation.confidence, voteEstimation.details);
@@ -2162,29 +2209,26 @@ function addProjectSortInterface(projectCards, projectData) {
 function extractAllShipsData() {
   const ships = [];
   const shipCards = document.querySelectorAll('.card-with-gradient');
-  let shipIndex = 0;
   
-  shipCards.forEach((shipCard, cardIndex) => {
-    const shipData = extractIndividualShipData(shipCard, cardIndex);
+  shipCards.forEach((shipCard, domIndex) => {
+    const shipData = extractIndividualShipData(shipCard, domIndex);
     if (shipData && shipData.shells > 0) {
-      shipData.index = shipIndex;
-      shipData.name = `Ship ${shipIndex + 1}`;
+      shipData.filteredIndex = ships.length;
       ships.push(shipData);
-      shipIndex++;
     }
   });
   
   return ships;
 }
 
-function extractIndividualShipData(shipCard, index) {
+function extractIndividualShipData(shipCard, domIndex) {
   try {
     const shipNameElement = shipCard.querySelector('p.font-extrabold');
     if (!shipNameElement || !shipNameElement.textContent.includes('Ship')) {
       return null;
     }
     
-    const shipName = shipNameElement.textContent.trim();
+    const originalShipName = shipNameElement.textContent.trim();
     
     let shellsText = '';
     let shells = 0;
@@ -2225,8 +2269,11 @@ function extractIndividualShipData(shipCard, index) {
     const voteEstimation = hours > 0 && shells > 0 ? VoteEstimationService.estimateVotes(shells, hours) : null;
     
     return {
-      index: index,
-      name: `Ship ${index + 1}`,
+      originalName: originalShipName,  
+      domIndex: domIndex,
+      filteredIndex: null, 
+      index: domIndex,
+      name: originalShipName,
       shells: shells,
       hours: hours,
       efficiency: efficiency,
@@ -2388,16 +2435,19 @@ function processProjectPage() {
 
 function addDatatoShipCards(ships) {
   const shipCards = document.querySelectorAll('.card-with-gradient:not(.som-enhanced)');
-  let shipDataIndex = 0;
+  const shipDataMap = new Map();
+  ships.forEach(ship => {
+    shipDataMap.set(ship.domIndex, ship);
+  });
   
-  shipCards.forEach((card, cardIndex) => {
+  shipCards.forEach((card, domIndex) => {
     const shipNameElement = card.querySelector('p.font-extrabold');
     if (shipNameElement && shipNameElement.textContent.includes('Ship')) {
       card.classList.add('som-enhanced', 'som-ship-card');
       
-      const ship = ships[shipDataIndex];
+      const ship = shipDataMap.get(domIndex);
       if (ship) {
-        shipDataIndex++;
+        console.log(`SOM Utils: Enhancing DOM card ${domIndex} with data from ship "${ship.originalName}"`);
         
         if (ship.efficiency > 0) {
         const efficiencyDiv = document.createElement('div');
@@ -3566,7 +3616,7 @@ function createGraphModal(ships, history) {
               <div class="som-stats-grid">
                 ${ships.map((ship, index) => `
                   <div class="som-stat-item">
-                    <div class="som-stat-label" style="color: ${getShipColor(index)}">${ship.name}</div>
+                    <div class="som-stat-label" style="color: ${getShipColor(ship.domIndex)}">${ship.originalName}</div>
                     <div class="som-stat-value">${ship.efficiency.toFixed(2)} s/h</div>
                     ${ship.voteEstimation ? `<div class="som-stat-extra">${ship.voteEstimation.estimatedVotes} est. votes</div>` : ''}
                   </div>
@@ -3781,31 +3831,52 @@ function setupGraphControls(ships, history) {
     });
   }
   
-  document.querySelectorAll('.ship-toggle').forEach(toggle => {
+  const shipIndexMap = new Map();
+  ships.forEach((ship, filteredIndex) => {
+    shipIndexMap.set(ship.domIndex, filteredIndex);
+  });
+  
+  document.querySelectorAll('.ship-toggle').forEach((toggle, toggleIndex) => {
     toggle.addEventListener('change', function() {
-      const shipIndex = parseInt(this.dataset.shipIndex);
+      const domIndex = this.dataset.shipIndex !== undefined ? 
+        parseInt(this.dataset.shipIndex) : ships[toggleIndex]?.domIndex;
+      
+      const filteredIndex = shipIndexMap.get(domIndex);
+      if (filteredIndex === undefined) {
+        return;
+      }
+      
       
       if (hasHistory) {
-        const datasetIndex = shipIndex + 1;
+        const datasetIndex = filteredIndex + 1;
         if (chart.data.datasets[datasetIndex]) {
           chart.data.datasets[datasetIndex].hidden = !this.checked;
         }
       } else {
-        const originalData = chart.data.datasets[0].ships.map(ship => ship.efficiency);
-        const originalLabels = chart.data.datasets[0].ships.map(ship => ship.name);
-        const originalColors = chart.data.datasets[0].ships.map((_, index) => getShipColor(index));
+        const originalData = ships.map(ship => ship.efficiency);
+        const originalLabels = ships.map(ship => ship.originalName);
+        const originalColors = ships.map(ship => getShipColor(ship.domIndex));
         
-        const checkedShips = Array.from(document.querySelectorAll('.ship-toggle:checked'))
-          .map(cb => parseInt(cb.dataset.shipIndex));
+        const checkedToggles = Array.from(document.querySelectorAll('.ship-toggle:checked'));
+        const checkedIndices = checkedToggles.map((cb, idx) => {
+          const cbDomIndex = cb.dataset.shipIndex !== undefined ? 
+            parseInt(cb.dataset.shipIndex) : ships[idx]?.domIndex;
+          return shipIndexMap.get(cbDomIndex);
+        }).filter(idx => idx !== undefined);
         
-        chart.data.labels = checkedShips.map(index => originalLabels[index]);
-        chart.data.datasets[0].data = checkedShips.map(index => originalData[index]);
-        chart.data.datasets[0].backgroundColor = checkedShips.map(index => originalColors[index]);
-        chart.data.datasets[0].borderColor = checkedShips.map(index => originalColors[index]);
+        chart.data.labels = checkedIndices.map(index => originalLabels[index]);
+        chart.data.datasets[0].data = checkedIndices.map(index => originalData[index]);
+        chart.data.datasets[0].backgroundColor = checkedIndices.map(index => originalColors[index]);
+        chart.data.datasets[0].borderColor = checkedIndices.map(index => originalColors[index]);
       }
       
       chart.update();
     });
+    
+    if (toggleIndex < ships.length) {
+      toggle.dataset.shipIndex = ships[toggleIndex].domIndex;
+      toggle.dataset.filteredIndex = ships[toggleIndex].filteredIndex;
+    }
   });
 }
 
@@ -5466,6 +5537,7 @@ function processCurrentPage() {
     isProcessing = false;
   }
 }
+
 cleanupContaminatedData();
 
 document.addEventListener('DOMContentLoaded', processCurrentPage);
