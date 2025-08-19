@@ -5496,6 +5496,72 @@ async function processProjectAIAnalysis(projectElement) {
   }
 }
 
+function addStyleToggle() {
+  const currentPath = window.location.pathname;
+  if (!currentPath.match(/^\/users\/\d+/)) return;
+  
+  const main = document.querySelector('main.w-full.overflow-auto[data-sidebar-target="mainContent"]');
+  if (!main) return;
+  
+  const styleTag = main.querySelector('style');
+  if (!styleTag) return;
+  
+  if (document.querySelector('.som-style-toggle')) return;
+  
+  const toggle = document.createElement('button');
+  toggle.className = 'som-style-toggle';
+  toggle.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    background: rgba(139, 115, 85, 0.9);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    backdrop-filter: blur(4px);
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  `;
+  
+  function updateToggle() {
+    const isCurrentlyDisabled = localStorage.getItem('som-utils-styles-disabled') === 'true';
+    toggle.innerHTML = isCurrentlyDisabled ? '🕶️' : '👁️';
+    toggle.title = isCurrentlyDisabled ? 'Enable custom styles' : 'Disable custom styles';
+    
+    if (isCurrentlyDisabled) {
+      styleTag.disabled = true;
+      toggle.style.background = 'rgba(74, 45, 36, 0.9)';
+    } else {
+      styleTag.disabled = false;
+      toggle.style.background = 'rgba(139, 115, 85, 0.9)';
+    }
+  }
+  
+  toggle.addEventListener('click', () => {
+    const currentState = localStorage.getItem('som-utils-styles-disabled') === 'true';
+    localStorage.setItem('som-utils-styles-disabled', (!currentState).toString());
+    updateToggle();
+  });
+  
+  toggle.addEventListener('mouseenter', () => {
+    toggle.style.transform = 'scale(1.1)';
+  });
+  
+  toggle.addEventListener('mouseleave', () => {
+    toggle.style.transform = 'scale(1)';
+  });
+  
+  updateToggle();
+  document.body.appendChild(toggle);
+}
+
 function processCurrentPage() {
   const currentPath = window.location.pathname;
   const now = Date.now();
@@ -5516,6 +5582,7 @@ function processCurrentPage() {
     }
     
     addFilePasteSupport();
+    addStyleToggle();
     
     displayUserRank();
     
