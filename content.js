@@ -340,7 +340,13 @@ function calculateAccurateEfficiency(projectId, fallbackShells, fallbackHours) {
       projectId: projectId
     };
   } else {
-    return null;
+    const fallbackEfficiency = calculateShellsPerHour(fallbackShells, fallbackHours);
+    return {
+      efficiency: fallbackEfficiency,
+      shells: fallbackShells,
+      hours: fallbackHours,
+      projectId: projectId
+    };
   }
 }
 
@@ -1709,9 +1715,6 @@ function addShellsPerHourToCard(card) {
   let efficiencyData;
   if (projectId) {
     efficiencyData = calculateAccurateEfficiency(projectId, shells, totalHours);
-    if (!efficiencyData) {
-      return;
-    }
   } else {
     efficiencyData = {
       efficiency: calculateShellsPerHour(shells, totalHours),
