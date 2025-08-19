@@ -120,6 +120,10 @@ class VoteEstimationService {
 }
 
 function parseTimeString(timeStr) {
+  if (!timeStr || typeof timeStr !== 'string') {
+    return 0;
+  }
+  
   const hourMatch = timeStr.match(/(\d+)h/);
   const minuteMatch = timeStr.match(/(\d+)m/);
   
