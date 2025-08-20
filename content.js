@@ -2130,6 +2130,42 @@ async function processCampfirePage() {
       if (todoListSection && todoListSection.textContent.includes('Todo list:')) {
         todoListSection.closest('.mb-8').style.display = 'none';
       }
+    } else {
+      const headerSection = document.querySelector('h1');
+      if (headerSection && headerSection.textContent.includes('Campfire')) {
+        const headerContainer = headerSection.closest('div');
+        if (headerContainer) {
+          const statsContainer = document.createElement('div');
+          statsContainer.className = 'som-campfire-stats mb-8';
+          statsContainer.innerHTML = statsHTML;
+          const parentContainer = headerContainer.parentNode;
+          if (parentContainer) {
+            const nextSibling = headerContainer.nextElementSibling;
+            if (nextSibling) {
+              parentContainer.insertBefore(statsContainer, nextSibling);
+            } else {
+              parentContainer.appendChild(statsContainer);
+            }
+          }
+          
+          const onboardingSection = document.querySelector('h2');
+          if (onboardingSection && onboardingSection.textContent.includes('Set up your account!')) {
+            const onboardingContainer = onboardingSection.closest('.mb-4');
+            if (onboardingContainer) {
+              onboardingContainer.style.display = 'none';
+            }
+          }
+
+          const onboardingCards = document.querySelectorAll('.card-with-gradient[data-controller="card"]');
+          onboardingCards.forEach(card => {
+            if (card.textContent.includes('Install Hackatime') || 
+                card.textContent.includes('Order free stickers') ||
+                card.textContent.includes('Verify Your Age')) {
+              card.style.display = 'none';
+            }
+          });
+        }
+      }
     }
   } catch (error) {
     console.error('SOM Utils: Error processing campfire page:', error);
