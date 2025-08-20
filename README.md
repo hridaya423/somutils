@@ -7,6 +7,15 @@ Compatible with Chrome, Firefox and Safari!
 
 ## Features
 
+### **Glass UI Campfire Dashboard**
+- **Comprehensive Stats**: 9 key metrics in a perfect 3x3 grid including:
+  - Current Shells (with projected earnings)
+  - Net Worth (total earned - spent)
+  - Total Hours & Today's Hours (integrated with Hackatime)
+  - Real Orders Count (actual API data, not estimates)
+  - Shell Efficiency & Leaderboard Rank
+  - Total Devlogs & Spent Shells
+  - Shop-style progress bar with real goal markers
 - **Vote Estimation**: Estimates how many votes your projects received based on shells and hours
 - **Leaderboard Rank**: Shows your current rank and economy percentage next to shell count
 - **Voting stats**: Detects potential AI-generated content in devlogs and projects during voting and gives devlogs per hour
@@ -16,12 +25,17 @@ Compatible with Chrome, Firefox and Safari!
   - Most/Least Shells earned
   - Best/Worst Efficiency (shells/hour)
   - Alphabetical (A-Z, Z-A)
+- **AI Chatbot Assistant**: Intelligent chatbot with access to your project data and performance metrics
+  - Quick actions for project analysis, performance improvement, and project ideas
+  - Personalized advice based on your coding efficiency and project history
+  - Contextual help for voting strategies and project optimization
 - **Paste Files for devlogs**: Paste images/files directly into devlogs!
 - **Personalized Time Estimates**: Uses your efficiency data for accurate estimates
 - **Goal Tracking System**: Add shop items to goals and track progress
 - **Advanced Stats**: Efficiency comparisons, and custom calculator too
 - **Black Market**: Support for black market shop items and enhanced estimates and you get preferred customer for free
-- **Ship Data**:  ship-by-ship efficiency tracking and a beautiful graph to see ship efficiency if you have multiple
+- **Free Sunglasses**: you get sunglasses for free!
+- **Ship Data**: Ship-by-ship efficiency tracking and a beautiful graph to see ship efficiency if you have multiple
 
 ## Installation
 
