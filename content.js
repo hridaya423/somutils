@@ -1813,6 +1813,328 @@ function getTotalHoursData() {
     return { totalHours: 0, timestamp: 0, lastUpdated: null };
   }
 }
+async function fetchUserNetWorth(username) {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage({
+      action: 'fetchUserNetWorth',
+      username: username
+    }, (response) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+        return;
+      }
+      
+      if (response && response.success) {
+        resolve(response.data);
+      } else {
+        reject(new Error(response?.error || 'Failed to fetch user net worth'));
+      }
+    });
+  });
+}
+
+async function getCampfireStats() {
+  try {
+    const username = getCurrentUsername();
+    if (!username) {
+      console.warn('SOM Utils: No username found for campfire stats');
+      return null;
+    }
+
+    const [goalsData, hoursData, rank, netWorthData] = await Promise.all([
+      Promise.resolve(getGoalsData()),
+      Promise.resolve(getTotalHoursData()),
+      fetchUserRank(username).catch(() => null),
+      fetchUserNetWorth(username).catch(() => null)
+    ]);
+    
+    const currentShells = getCurrentUserShells();
+    const rawProjectedShells = getCurrentUserShells(true);
+    const projectedShells = Math.ceil(rawProjectedShells);
+    let totalSpent = netWorthData ? netWorthData.totalSpent : 0;
+    let netWorth = currentShells + totalSpent;
+    let spentShells = totalSpent;
+    const goalProgress = calculateGoalProgress(true);
+    const efficiency = getUserAverageEfficiency() || 0;
+    const devlogData = getTotalDevlogsData();
+    const totalDevlogs = devlogData.totalDevlogs;
+    
+    const stats = {
+      currentShells: currentShells,
+      projectedShells: projectedShells,
+      netWorth: netWorth,
+      spentShells: spentShells,
+      totalEarned: netWorth,
+      totalHours: hoursData.totalHours,
+      totalDevlogs: totalDevlogs,
+      totalOrders: netWorthData ? netWorthData.shopOrderCount : 0,
+      efficiency: efficiency,
+      leaderboardRank: rank,
+      goals: {
+        count: goalsData.goals.length,
+        totalCost: goalsData.totalShellsNeeded,
+        progress: goalProgress.percentage || 0,
+        affordableCount: goalProgress.goals ? goalProgress.goals.filter(goal => goal.canAfford).length : 0
+      },
+      username: username,
+      timestamp: Date.now()
+    };
+    
+    return stats;
+  } catch (error) {
+    console.error('SOM Utils: Error getting campfire stats:', error);
+    return null;
+  }
+}
+
+function createStatsCard(title, value, subtitle, icon, color = 'blue') {
+  const colorMap = {
+    blue: 'bg-blue-500',
+    green: 'bg-green-500',
+    purple: 'bg-purple-500',
+    orange: 'bg-orange-500',
+    red: 'bg-red-500',
+    indigo: 'bg-indigo-500',
+    teal: 'bg-teal-500',
+    pink: 'bg-pink-500',
+    yellow: 'bg-yellow-500',
+    cyan: 'bg-cyan-500'
+  };
+  
+  return `
+    <div class="som-glass-stats-card">
+      <div class="som-glass-glow" style="background: radial-gradient(circle, ${colorMap[color].replace('bg-', '')} 0%, transparent 70%);"></div>
+      
+      <div class="som-glass-content">
+        <div class="som-glass-header">
+          <div class="som-glass-icon ${colorMap[color]}">${icon}</div>
+          <h3 class="som-glass-title">${title}</h3>
+        </div>
+        <div class="som-glass-value">${value}</div>
+        <div class="som-glass-subtitle">${subtitle || ''}</div>
+      </div>
+    </div>
+  `;
+}
+
+function createCampfireStatsSection(stats) {
+  if (!stats) {
+    return '<div class="mb-8 text-center opacity-60">Unable to load stats at this time.</div>';
+  }
+  
+  const formatNumber = (num) => {
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
+    return num.toString();
+  };
+  
+  const formatHours = (hours) => {
+    if (hours >= 1) return Math.floor(hours) + 'h';
+    const minutes = Math.floor(hours * 60);
+    return minutes + 'm';
+  };
+  
+  const shellIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="w-6 h-6 text-white"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>';
+  const hoursIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="w-6 h-6 text-white"><g fill="none"><path d="M24 0v24H0V0zM12.593 23.258l-.011.002-.071.035-.02.004-.014-.004-.071-.035c-.01-.004-.019-.001-.024.005l-.004.01-.017.428.005.02.01.013.104.074.015.004.012-.004.104-.074.012-.016.004-.017-.017-.427c-.002-.01-.009-.017-.017-.018m.265-.113-.013.002-.185.093-.01.01-.003.011.018.43.005.012.008.007.201.093c.012.004.023 0 .029-.008l.004-.014-.034-.614c-.003-.012-.01-.02-.02-.022m-.715.002a.023.023 0 0 0-.027.006l-.006.014-.034.614c0 .012.007.02.017.024l.015-.002.201-.093.01-.008.004-.011.017-.43-.003-.012-.01-.01z"></path><path fill="currentColor" d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2m0 4a1 1 0 0 0-1 1v5a1 1 0 0 0 .293.707l3 3a1 1 0 0 0 1.414-1.414L13 11.586V7a1 1 0 0 0-1-1"></path></g></svg>';
+  const devlogIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="w-6 h-6 text-white"><path fill="currentColor" d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" /></svg>';
+  const rankIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="w-6 h-6 text-white"><path fill="currentColor" d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm2.7-2h8.6l.9-5.4l-3.1 2.7L12 8l-2.1 3.3l-3.1-2.7L7.7 14z"/></svg>';
+  const netWorthIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="w-6 h-6 text-white"><path fill="currentColor" d="M7,15H9C9,16.08 10.37,17 12,17C13.63,17 15,16.08 15,15C15,13.9 13.96,13.5 11.76,12.97C9.64,12.44 7,11.78 7,9C7,7.21 8.47,5.69 10.5,5.18V3H13.5V5.18C15.53,5.69 17,7.21 17,9H15C15,7.92 13.63,7 12,7C10.37,7 9,7.92 9,9C9,10.1 10.04,10.5 12.24,11.03C14.36,11.56 17,12.22 17,15C17,16.79 15.53,18.31 13.5,18.82V21H10.5V18.82C8.47,18.31 7,16.79 7,15Z" /></svg>';
+  const efficiencyIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="w-6 h-6 text-white"><path fill="currentColor" d="M16,6L18.29,8.29L13.41,13.17L9.41,9.17L2,16.59L3.41,18L9.41,12L13.41,16L19.71,9.71L22,12V6H16Z" /></svg>';
+  const spentIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="w-6 h-6 text-white"><path fill="currentColor" d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12.5,7V12.25L17,14.92L16.25,16.15L11,13V7H12.5Z" /></svg>';
+  const ordersIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="w-6 h-6 text-white"><path fill="currentColor" d="M7 4V2C7 1.45 7.45 1 8 1H16C16.55 1 17 1.45 17 2V4H20C20.55 4 21 4.45 21 5S20.55 6 20 6H19V19C19 20.1 18.1 21 17 21H7C5.9 21 5 20.1 5 19V6H4C3.45 6 3 5.55 3 5S3.45 4 4 4H7M9 3V4H15V3H9M7 6V19H17V6H7M9 8H15V10H9V8M9 12H15V14H9V12M9 16H13V18H9V16Z"/></svg>';
+  
+  return `
+    <div class="mb-8">
+      <div class="flex items-center gap-3 mb-6">
+        <h2 class="text-2xl font-bold text-som-dark">Your Summer Stats</h2>
+      </div>
+      
+      ${stats.goals.count > 0 ? createGoalsProgressSection(stats) : ''}
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        ${createStatsCard(
+          'Current Shells', 
+          formatNumber(stats.currentShells), 
+          stats.projectedShells > stats.currentShells ? `+${formatNumber(stats.projectedShells - stats.currentShells)} projected` : null,
+          shellIcon, 
+          'teal'
+        )}
+        
+        ${createStatsCard(
+          'Net Worth', 
+          formatNumber(stats.netWorth), 
+          'Total earned',
+          netWorthIcon, 
+          'indigo'
+        )}
+
+        ${createStatsCard(
+          'Spent Shells', 
+          formatNumber(stats.spentShells), 
+          'Total purchased',
+          spentIcon, 
+          'red'
+        )}
+        
+        ${createStatsCard(
+          'Total Hours', 
+          formatHours(stats.totalHours), 
+          'Coding time logged',
+          hoursIcon, 
+          'blue'
+        )}
+        
+        ${stats.hackatimeIntegrated ? createStatsCard(
+          'Today\'s Hours', 
+          formatHours(stats.todayHours || 0), 
+          'Coding time today',
+          hoursIcon, 
+          'green'
+        ) : ''}
+        
+        ${createStatsCard(
+          'Devlogs', 
+          stats.totalDevlogs.toString(), 
+          'Project updates',
+          devlogIcon, 
+          'orange'
+        )}
+        
+        ${stats.leaderboardRank ? createStatsCard(
+          'Leaderboard Rank', 
+          `#${stats.leaderboardRank}`, 
+          'Global position',
+          rankIcon, 
+          'yellow'
+        ) : ''}
+        
+        ${createStatsCard(
+          'Shell Efficiency', 
+          stats.efficiency > 0 ? stats.efficiency.toFixed(1) + '/hr' : 'N/A', 
+          'Shells per hour',
+          efficiencyIcon, 
+          'purple'
+        )}
+        
+        ${createStatsCard(
+          'Orders', 
+          stats.totalOrders.toString(), 
+          'Shop purchases',
+          ordersIcon, 
+          'cyan'
+        )}
+      </div>
+    </div>
+  `;
+}
+
+function createGoalsProgressSection(stats) {
+  const formatNumber = (num) => {
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
+    return num.toString();
+  };
+  
+  if (stats.goals.count === 0) {
+    return '';
+  }
+  
+  const progressGlassStyle = `
+    background: rgba(246, 219, 186, 0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    padding: 24px;
+    margin-bottom: 32px;
+  `;
+
+  return `
+    <div class="som-glass-progress-section" style="${progressGlassStyle}">
+      
+      <div class="som-glass-progress-header">
+        <h3 class="som-glass-progress-title">Goals Progress</h3>
+        <span class="som-glass-progress-count">${stats.goals.count} goals</span>
+      </div>
+      
+      <div class="som-goals-progress-container">
+        <div class="som-goals-progress-bar" role="progressbar" aria-valuenow="${stats.currentShells}" aria-valuemin="0" aria-valuemax="${stats.goals.totalCost}">
+          ${createGoalMarkers(calculateGoalProgress(true).goals, calculateGoalProgress(true).totalNeeded, calculateGoalProgress(true).activeShells)}
+        </div>
+      </div>
+      
+      <div class="som-glass-progress-stats">
+        <div class="som-glass-stat-item">
+          <span class="som-glass-stat-value">${formatNumber(stats.currentShells)} / ${formatNumber(stats.goals.totalCost)}</span>
+          <span class="som-glass-stat-label">shells</span>
+        </div>
+        <div class="som-glass-stat-item">
+          <span class="som-glass-stat-value">${stats.goals.progress.toFixed(1)}%</span>
+          <span class="som-glass-stat-label">complete</span>
+        </div>
+        <div class="som-glass-stat-item">
+          <span class="som-glass-stat-value">${stats.goals.affordableCount}/${stats.goals.count}</span>
+          <span class="som-glass-stat-label">affordable</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function processCampfirePage() {
+  const existingStats = document.querySelector('.som-campfire-stats');
+  if (existingStats) {
+    return;
+  }
+  
+  try {
+    const stats = await getCampfireStats();
+    
+    const hackatimeTodayElement = document.querySelector('[data-hackatime-dashboard-target="todayTime"]');
+    const hackatimeTotalElement = document.querySelector('[data-hackatime-dashboard-target="totalTime"]');
+    
+    let todayHours = 0;
+    let hackatimeTotalHours = null;
+    
+    if (hackatimeTodayElement) {
+      const todayText = hackatimeTodayElement.textContent;
+      todayHours = parseTimeString(todayText);
+    }
+    
+    if (hackatimeTotalElement) {
+      const totalText = hackatimeTotalElement.textContent;
+      hackatimeTotalHours = parseTimeString(totalText);
+    }
+    
+    const enhancedStats = {
+      ...stats,
+      todayHours: todayHours,
+      hackatimeIntegrated: hackatimeTodayElement !== null,
+      totalHours: stats.totalHours
+    };
+    
+    const statsHTML = createCampfireStatsSection(enhancedStats);
+    
+    const hackatimeSection = document.querySelector('.mb-8.color-forest');
+    if (hackatimeSection) {
+      const statsContainer = document.createElement('div');
+      statsContainer.className = 'som-campfire-stats';
+      statsContainer.innerHTML = statsHTML;
+      
+      hackatimeSection.parentNode.insertBefore(statsContainer, hackatimeSection);
+      hackatimeSection.style.display = 'none';
+      const todoListSection = document.querySelector('.mb-8 .card-with-gradient[data-controller="card"]');
+      if (todoListSection && todoListSection.textContent.includes('Todo list:')) {
+        todoListSection.closest('.mb-8').style.display = 'none';
+      }
+    }
+  } catch (error) {
+    console.error('SOM Utils: Error processing campfire page:', error);
+  }
+}
 
 function calculateTotalStats(projectData) {
   let totalHours = 0;
@@ -1826,12 +2148,6 @@ function calculateTotalStats(projectData) {
     }
   });
 
-  const projectCards = document.querySelectorAll('a[href^="/projects/"]');
-  const actualProjectCards = Array.from(projectCards).filter(card => {
-    const hasCreateText = card.textContent.toLowerCase().includes('create project');
-    const hasProjectId = card.href.match(/\/projects\/\d+$/);
-    return !hasCreateText && hasProjectId;
-  });
 
   const allProjectCards = document.querySelectorAll('.bg-\\[\\#F3ECD8\\]') || 
                           document.querySelectorAll('div[class*="rounded-2xl"]');
@@ -1972,6 +2288,7 @@ function processProjectCards() {
   
   if (window.location.pathname === '/my_projects' && projectData.length > 0) {
     addTotalStatsBox(projectData);
+    storeTotalDevlogs(projectData);
   }
 }
 
@@ -1982,6 +2299,7 @@ function extractProjectSortingData(card, index) {
   let shellsText = '';
   let title = '';
   let hasCertificationReview = false;
+  let devlogCount = 0;
   
   const titleElement = card.querySelector('h2, h3, .font-bold, [class*="text-lg"]') || card.querySelector('p:not(.text-gray-400)');
   if (titleElement) {
@@ -2003,6 +2321,11 @@ function extractProjectSortingData(card, index) {
     if (text.includes('Project is awaiting ship certification!')) {
       hasCertificationReview = true;
     }
+    
+    const devlogMatch = text.match(/(\d+)\s*devlogs?/i);
+    if (devlogMatch) {
+      devlogCount = parseInt(devlogMatch[1]);
+    }
   });
   
   if (hasCertificationReview) {
@@ -2023,7 +2346,8 @@ function extractProjectSortingData(card, index) {
     shells: shells,
     efficiency: efficiency,
     timeText: timeText,
-    shellsText: shellsText
+    shellsText: shellsText,
+    devlogCount: devlogCount
   };
 }
 
@@ -2033,6 +2357,41 @@ function getSortPreference() {
 
 function setSortPreference(sortBy) {
   localStorage.setItem('som-project-sort', sortBy);
+}
+
+function storeTotalDevlogs(projectData) {
+  try {
+    let totalDevlogs = 0;
+    
+    projectData.forEach(project => {
+      if (project.devlogCount && project.devlogCount > 0) {
+        totalDevlogs += project.devlogCount;
+      }
+    });
+    
+    const devlogData = {
+      totalDevlogs: totalDevlogs,
+      timestamp: Date.now(),
+      lastUpdated: new Date().toISOString()
+    };
+    
+    localStorage.setItem('som-utils-total-devlogs', JSON.stringify(devlogData));
+  } catch (error) {
+    console.error('SOM Utils: Error storing total devlogs:', error);
+  }
+}
+
+function getTotalDevlogsData() {
+  try {
+    const data = localStorage.getItem('som-utils-total-devlogs');
+    if (!data) {
+      return { totalDevlogs: 0, timestamp: 0, lastUpdated: null };
+    }
+    return JSON.parse(data);
+  } catch (error) {
+    console.error('SOM Utils: Error parsing total devlogs data:', error);
+    return { totalDevlogs: 0, timestamp: 0, lastUpdated: null };
+  }
 }
 
 function createProjectSortInterface() {
@@ -3153,7 +3512,7 @@ Projects CANNOT be:
 ### Project Certification:
 - Manual review of all projects to help ensure fraud doesn't occur
 - May take a while for your project to be verified, especially on weekends
-- Voting more places your projects higher in the ship certification queue
+- Voting more places your projects higher in the ship certification queue 
 - If your project gets rejected, click "No ship certification" to see the reason, fix the issue, then click "Request Re-certification"
 
 ### Black Market:
@@ -5613,6 +5972,8 @@ function processCurrentPage() {
       processShopPage();
     } else if (currentPath === '/shop/black_market') {
       processBlackMarketPage();
+    } else if (currentPath === '/campfire') {
+      processCampfirePage();
     } else {
       processProjectCards();
     }

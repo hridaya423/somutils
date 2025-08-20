@@ -2798,3 +2798,175 @@ input[type="file"][data-som-enhanced]:hover {
     background-position: 200% 0;
   }
 }
+
+.som-glass-progress-section:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 16px 48px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  background: rgba(246, 219, 186, 0.25);
+}
+.som-glass-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.som-glass-progress-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #8B4513;
+  margin: 0;
+}
+.som-glass-progress-count {
+  font-size: 14px;
+  color: #8B4513;
+  opacity: 0.7;
+  font-weight: 600;
+}
+.som-glass-progress-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.som-glass-stat-item {
+  text-align: center;
+}
+.som-glass-stat-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: #8B4513;
+  display: block;
+  margin-bottom: 4px;
+}
+.som-glass-stat-label {
+  font-size: 12px;
+  color: #8B4513;
+  opacity: 0.8;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.som-glass-progress-section .som-goals-progress-bar {
+  background: rgba(139, 69, 19, 0.1) !important;
+  border: 1px solid rgba(139, 69, 19, 0.2) !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(5px) !important;
+}
+.som-glass-progress-section .som-goals-progress-container {
+  margin: 16px 0 !important;
+}
+
+.som-glass-stats-card {
+  background: rgba(246, 219, 186, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.som-glass-stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 16px 48px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  background: rgba(246, 219, 186, 0.25);
+}
+
+.som-glass-glow {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  opacity: 0.05;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.som-glass-content {
+  position: relative;
+  z-index: 2;
+  padding: 24px;
+}
+
+.som-glass-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 2;
+}
+
+.som-glass-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.som-glass-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #8B4513;
+  margin: 0;
+}
+
+.som-glass-value {
+  font-size: 32px;
+  font-weight: 900;
+  color: #8B4513;
+  margin-bottom: 4px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.som-glass-subtitle {
+  font-size: 14px;
+  color: #8B4513;
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+.som-glass-stats-card * {
+  transition: none !important;
+}
+
+.som-glass-stats-card *:hover {
+  transform: none !important;
+  background: none !important;
+  box-shadow: none !important;
+}
+
+.som-glass-progress-section {
+  background: rgba(246, 219, 186, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  padding: 24px;
+  margin-bottom: 32px;
+}
+
+.som-glass-progress-section:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 16px 48px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  background: rgba(246, 219, 186, 0.25);
+}
+
