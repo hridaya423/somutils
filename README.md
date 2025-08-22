@@ -7,8 +7,8 @@ Compatible with Chrome, Firefox and Safari!
 
 ## Features
 
-### **Glass UI Campfire Dashboard**
-- **Comprehensive Stats**: 9 key metrics in a perfect 3x3 grid including:
+  **Campfire Dashboard**
+- **Comprehensive Stats**: 9 key metrics including:
   - Current Shells (with projected earnings)
   - Net Worth (total earned - spent)
   - Total Hours & Today's Hours (integrated with Hackatime)
