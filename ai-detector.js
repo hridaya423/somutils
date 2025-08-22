@@ -117,7 +117,7 @@ Example response: {"ai_probability": 0.15, "confidence": 0.8}`;
           model: this.model,
           temperature: 0.1,
           response_format: { type: "json_object" },
-          max_completion_tokens: 40,
+          max_completion_tokens: 1000,
           include_reasoning: false
         };
 
