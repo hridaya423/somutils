@@ -1,7 +1,7 @@
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   if (request.action === 'fetchUserRank') {
-    fetchUserRank(request.username)
+    fetchUserRank(request.username, request.avatarUrl)
       .then(rank => {
         sendResponse({ success: true, rank: rank });
       })
@@ -25,7 +25,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
   
   if (request.action === 'fetchUserNetWorth') {
-    fetchUserNetWorth(request.username)
+    fetchUserNetWorth(request.username, request.avatarUrl)
       .then(data => {
         sendResponse({ success: true, data: data });
       })
@@ -38,7 +38,35 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
 });
 
-async function fetchUserRank(username) {
+function findUserByAvatarAndName(users, username, avatarUrl) {
+  if (!users || !Array.isArray(users) || users.length === 0) {
+    return null;
+  }
+
+  if (avatarUrl) {
+    for (const user of users) {
+      if (user.username === username && user.image === avatarUrl) {
+        return user;
+      }
+    }
+
+    for (const user of users) {
+      if (user.image === avatarUrl) {
+        return user;
+      }
+    }
+  }
+
+  for (const user of users) {
+    if (user.username === username) {
+      return user;
+    }
+  }
+
+  return null;
+}
+
+async function fetchUserRank(username, avatarUrl = null) {
   if (!username) {
     throw new Error('Username is required');
   }
@@ -50,9 +78,10 @@ async function fetchUserRank(username) {
     }
     const data = await response.json();
     if (data.users && data.users.length > 0) {
-      const user = data.users[0];
-      console.log('Found user rank:', user.rank);
-      return user.rank;
+      const user = findUserByAvatarAndName(data.users, username, avatarUrl);
+      if (user) {
+        return user.rank;
+      }
     }
     
     throw new Error('User not found in leaderboard');
@@ -62,7 +91,7 @@ async function fetchUserRank(username) {
   }
 }
 
-async function fetchUserNetWorth(username) {
+async function fetchUserNetWorth(username, avatarUrl = null) {
   if (!username) {
     throw new Error('Username is required');
   }
@@ -80,7 +109,11 @@ async function fetchUserNetWorth(username) {
       throw new Error('User not found in leaderboard');
     }
     
-    const user = data.users[0];
+    const user = findUserByAvatarAndName(data.users, username, avatarUrl);
+    if (!user) {
+      throw new Error('User not found in leaderboard');
+    }
+    
     
     let totalEarned = 0;
     let totalSpent = 0;

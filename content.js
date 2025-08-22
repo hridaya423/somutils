@@ -785,6 +785,72 @@ function getCurrentUsername() {
   return storedUsername || null;
 }
 
+function getCurrentUserAvatarUrl() {
+  const profileImage = document.querySelector('img.h-12.w-12.rounded-full.flex-shrink-0');
+  if (profileImage && profileImage.src) {
+    const avatarUrl = profileImage.src;
+    localStorage.setItem('som-utils-current-avatar', avatarUrl);
+    return avatarUrl;
+  }
+
+  const fallbackImages = document.querySelectorAll('img[src*="avatars.slack-edge.com"]');
+  for (const img of fallbackImages) {
+    if (img.src && (img.src.includes('avatars.slack-edge.com'))) {
+      localStorage.setItem('som-utils-current-avatar', img.src);
+      return img.src;
+    }
+  }
+
+  const storedAvatar = localStorage.getItem('som-utils-current-avatar');
+  if (storedAvatar) {
+    return storedAvatar;
+  }
+
+  return null;
+}
+
+function findUserByAvatarAndName(users, username, avatarUrl) {
+  if (!users || !Array.isArray(users) || users.length === 0) {
+    return null;
+  }
+
+  if (avatarUrl) {
+    for (const user of users) {
+      if (user.username === username && user.image === avatarUrl) {
+        return user;
+      }
+    }
+
+    for (const user of users) {
+      if (user.image === avatarUrl && 
+          (user.username.toLowerCase().includes(username.toLowerCase()) || 
+           username.toLowerCase().includes(user.username.toLowerCase()))) {
+        return user;
+      }
+    }
+
+    for (const user of users) {
+      if (user.image === avatarUrl) {
+        return user;
+      }
+    }
+  }
+
+  for (const user of users) {
+    if (user.username === username) {
+      return user;
+    }
+  }
+
+  for (const user of users) {
+    if (user.username.toLowerCase().includes(username.toLowerCase()) || 
+        username.toLowerCase().includes(user.username.toLowerCase())) {
+      return user;
+    }
+  }
+
+  return null;
+}
 
 let rankCache = {
   username: null,
@@ -806,7 +872,7 @@ let economyCache = {
 
 
 
-async function fetchUserRank(username) {
+async function fetchUserRank(username, avatarUrl = null) {
   if (!username) return null;
   
   const now = Date.now();
@@ -821,7 +887,7 @@ async function fetchUserRank(username) {
     
     return new Promise((resolve) => {
       chrome.runtime.sendMessage(
-        { action: 'fetchUserRank', username: username },
+        { action: 'fetchUserRank', username: username, avatarUrl: avatarUrl },
         (response) => {
           if (chrome.runtime.lastError) {
             console.error('SOM Utils: Runtime error:', chrome.runtime.lastError);
@@ -1813,11 +1879,12 @@ function getTotalHoursData() {
     return { totalHours: 0, timestamp: 0, lastUpdated: null };
   }
 }
-async function fetchUserNetWorth(username) {
+async function fetchUserNetWorth(username, avatarUrl = null) {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage({
       action: 'fetchUserNetWorth',
-      username: username
+      username: username,
+      avatarUrl: avatarUrl
     }, (response) => {
       if (chrome.runtime.lastError) {
         reject(new Error(chrome.runtime.lastError.message));
@@ -1836,6 +1903,8 @@ async function fetchUserNetWorth(username) {
 async function getCampfireStats() {
   try {
     const username = getCurrentUsername();
+    const avatarUrl = getCurrentUserAvatarUrl();
+    
     if (!username) {
       console.warn('SOM Utils: No username found for campfire stats');
       return null;
@@ -1844,8 +1913,8 @@ async function getCampfireStats() {
     const [goalsData, hoursData, rank, netWorthData] = await Promise.all([
       Promise.resolve(getGoalsData()),
       Promise.resolve(getTotalHoursData()),
-      fetchUserRank(username).catch(() => null),
-      fetchUserNetWorth(username).catch(() => null)
+      fetchUserRank(username, avatarUrl).catch(() => null),
+      fetchUserNetWorth(username, avatarUrl).catch(() => null)
     ]);
     
     const currentShells = getCurrentUserShells();
@@ -2912,6 +2981,11 @@ function addAIAssistantNavigation() {
     return;
   }
 
+  const isExpanded = getSidebarState();
+  const textClasses = isExpanded ? 
+    "text-nowrap tracking-tight pointer-events-none text-3xl transition-opacity duration-200" :
+    "text-nowrap tracking-tight pointer-events-none text-3xl transition-opacity duration-200 opacity-0 w-[0px]";
+
   const aiNavItem = document.createElement('li');
   aiNavItem.className = 'flex justify-start som-ai-assistant-nav';
   
@@ -2921,11 +2995,11 @@ function addAIAssistantNavigation() {
         <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" class="w-8 mr-4 h-8">
           <path fill="#4A2D24" d="M8 12C6.9 12 6 12.9 6 14V42C6 43.1 6.9 44 8 44H12L18 50L24 44H56C57.1 44 58 43.1 58 42V14C58 12.9 57.1 12 56 12H8ZM12 20V22H52V20H12ZM12 26V28H52V26H12ZM12 32V34H44V32H12Z"/>
         </svg>
-        <span class="text-nowrap tracking-tight pointer-events-none text-3xl transition-opacity duration-200" data-sidebar-target="collapseFade">
+        <span class="${textClasses}" data-sidebar-target="collapseFade">
           Chatbot
         </span>
       </span>
-      <div class="absolute transition-all duration-150 bottom-1 pr-3 box-content bg-som-highlight rounded-full z-0 group-hover:opacity-100 h-6 opacity-0 w-full" data-kind="underline" data-sidebar-target="underline"></div>
+      <div class="absolute transition-all duration-150 bottom-1 pr-3 box-content bg-som-highlight rounded-full z-0 group-hover:opacity-100 h-6 opacity-0 w-[36px]" data-kind="underline" data-sidebar-target="underline" style="transform: translateX(-10px);"></div>
     </button>
   `;
   
@@ -2939,6 +3013,113 @@ function addAIAssistantNavigation() {
     navList.insertBefore(aiNavItem, adminItem);
   } else {
     navList.appendChild(aiNavItem);
+  }
+  
+}
+
+function addLeaderboardNavigation() {
+  if (document.querySelector('.som-leaderboard-nav')) {
+    return;
+  }
+  
+  const navList = document.querySelector('nav.flex.items-center ul.space-y-1');
+  if (!navList) {
+    return;
+  }
+
+  const isExpanded = getSidebarState();
+  const textClasses = isExpanded ? 
+    "text-nowrap tracking-tight pointer-events-none text-3xl transition-opacity duration-200 som-leaderboard-text" :
+    "text-nowrap tracking-tight pointer-events-none text-3xl transition-opacity duration-200 som-leaderboard-text opacity-0 w-[0px]";
+
+  const leaderboardNavItem = document.createElement('li');
+  leaderboardNavItem.className = 'flex justify-start som-leaderboard-nav';
+  
+  leaderboardNavItem.innerHTML = `
+    <button class="relative inline-block group py-2 cursor-pointer text-2xl cursor-pointer" type="button">
+      <span class="som-link-content som-link-push">
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" class="w-8 mr-4 h-8">
+          <path fill="#4A2D24" d="M20 48H12C10.3431 48 9 49.3431 9 51V57C9 58.6569 10.3431 60 12 60H20C21.6569 60 23 58.6569 23 57V51C23 49.3431 21.6569 48 20 48Z"/>
+          <path fill="#4A2D24" d="M36 35H28C26.3431 35 25 36.3431 25 38V57C25 58.6569 26.3431 60 28 60H36C37.6569 60 39 58.6569 39 57V38C39 36.3431 37.6569 35 36 35Z"/>
+          <path fill="#4A2D24" d="M52 42H44C42.3431 42 41 43.3431 41 45V57C41 58.6569 42.3431 60 44 60H52C53.6569 60 55 58.6569 55 57V45C55 43.3431 53.6569 42 52 42Z"/>
+          <text x="16" y="49" text-anchor="middle" fill="#4A2D24" font-size="8" font-weight="bold">3</text>
+          <text x="32" y="34" text-anchor="middle" fill="#4A2D24" font-size="10" font-weight="bold">1</text>
+          <text x="48" y="41" text-anchor="middle" fill="#4A2D24" font-size="8" font-weight="bold">2</text>
+        </svg>
+        <span class="${textClasses}" data-sidebar-target="collapseFade">
+          Leaderboard
+        </span>
+      </span>
+      <div class="absolute transition-all duration-150 bottom-1 pr-3 box-content bg-som-highlight rounded-full z-0 group-hover:opacity-100 h-6 opacity-0 w-[36px]" data-kind="underline" data-sidebar-target="underline" style="transform: translateX(-10px);"></div>
+    </button>
+  `;
+  
+  const button = leaderboardNavItem.querySelector('button');
+  button.addEventListener('click', () => {
+    window.open('https://summer.hackclub.com/leaderboard', '_blank');
+  });
+  
+  const aiNavItem = navList.querySelector('.som-ai-assistant-nav');
+  if (aiNavItem) {
+    navList.insertBefore(leaderboardNavItem, aiNavItem.nextElementSibling);
+  } else {
+    const adminItem = navList.querySelector('li.border-2.border-dashed.border-orange-500');
+    if (adminItem) {
+      navList.insertBefore(leaderboardNavItem, adminItem);
+    } else {
+      navList.appendChild(leaderboardNavItem);
+    }
+  }
+}
+
+function getSidebarState() {
+  const sidebarContainer = document.querySelector('[data-sidebar-target="sidebar"]');
+  if (sidebarContainer) {
+    const widthStyle = sidebarContainer.style.width;
+    if (widthStyle) {
+      const width = parseFloat(widthStyle);
+      const isCollapsed = width <= 48;
+      return !isCollapsed;
+    }
+    
+    if (sidebarContainer.classList.contains('collapsed')) {
+      return false;
+    }
+    
+    const computedWidth = sidebarContainer.getBoundingClientRect().width;
+    const isCollapsed = computedWidth <= 48;
+    return !isCollapsed;
+  }
+  
+  const nativeTextElements = document.querySelectorAll('[data-sidebar-target="collapseFade"]');
+  for (const element of nativeTextElements) {
+    const computedStyle = window.getComputedStyle(element);
+    if (computedStyle.opacity !== '0' && computedStyle.visibility !== 'hidden') {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function ensureStimulusIntegration() {
+  const sidebarContainer = document.querySelector('[data-sidebar-target="sidebar"]');
+  if (sidebarContainer) {
+    const resizeEvent = new Event('resize');
+    window.dispatchEvent(resizeEvent);
+    
+    const customEvent = new CustomEvent('stimulus:connect');
+    sidebarContainer.dispatchEvent(customEvent);
+    
+    if (window.Stimulus && window.Stimulus.application) {
+      setTimeout(() => {
+        try {
+          window.Stimulus.application.start();
+        } catch (error) {
+          console.error('SOM Utils: Could not restart Stimulus application:', error);
+        }
+      }, 100);
+    }
   }
 }
 
@@ -5973,6 +6154,8 @@ function processCurrentPage() {
   }
   
   addAIAssistantNavigation();
+  addLeaderboardNavigation();
+  setTimeout(() => ensureStimulusIntegration(), 200);
   
   lastProcessTime = now;
   isProcessing = true;

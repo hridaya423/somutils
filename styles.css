@@ -2970,3 +2970,15 @@ input[type="file"][data-som-enhanced]:hover {
   background: rgba(246, 219, 186, 0.25);
 }
 
+.som-leaderboard-nav {
+  transition: all 0.3s ease;
+}
+
+.som-leaderboard-nav button {
+  transition: all 0.2s ease;
+}
+
+.som-leaderboard-nav:hover button {
+  transform: translateX(2px);
+}
+
