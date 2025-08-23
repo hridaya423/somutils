@@ -36,6 +36,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
   
+  if (request.action === 'fetchHackatimeStats') {
+    fetchHackatimeStats(request.slackId)
+      .then(data => {
+        sendResponse({ success: true, data: data });
+      })
+      .catch(error => {
+        console.error('SOM Utils Background: Error fetching Hackatime stats:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true;
+  }
+  
 });
 
 function findUserByAvatarAndName(users, username, avatarUrl) {
@@ -200,6 +212,24 @@ async function fetchEconomyData() {
     
   } catch (error) {
     console.error('Economy fetch error:', error);
+    throw error;
+  }
+}
+
+async function fetchHackatimeStats(slackId) {
+  if (!slackId) {
+    throw new Error('Slack ID is required');
+  }
+  
+  try {
+    const response = await fetch(`https://hackatime.hackclub.com/api/v1/users/${encodeURIComponent(slackId)}/stats?features=projects`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Hackatime fetch error:', error);
     throw error;
   }
 }

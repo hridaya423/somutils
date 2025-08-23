@@ -6145,6 +6145,254 @@ function addStyleToggle() {
   document.body.appendChild(toggle);
 }
 
+function processAdminUserPage() {
+  const allHeaders = document.querySelectorAll('h1, h2, h3, h4, .font-bold, .text-lg, .text-xl, strong, b');
+  let hackatimeSection = null;
+  
+  for (const header of allHeaders) {
+    if (header.textContent.toLowerCase().includes('hackatime')) {
+      hackatimeSection = header.closest('div.card, div.bg-white, div.border, div.p-4, div.mb-4') || 
+                        header.closest('div') || 
+                        header.parentElement;
+      break;
+    }
+  }
+  
+  if (!hackatimeSection) {
+    return;
+  }
+  
+  processHackatimeSection(hackatimeSection);
+}
+
+async function processHackatimeSection(section) {
+  if (section.querySelector('.som-enhanced-hackatime')) {
+    return;
+  }
+  
+  const hackatimeId = extractHackatimeId();
+  if (!hackatimeId) {
+    return;
+  }
+  
+  const userIdMatch = window.location.pathname.match(/\/admin\/users\/(\d+)/);
+  const userId = userIdMatch ? userIdMatch[1] : '';
+  const slackId = extractSlackId();
+  
+  const existingGrid = section.querySelector('.agrid');
+  if (!existingGrid) {
+    return;
+  }
+  
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  
+  const billyUrl = `https://billy.3kh0.net/?u=${encodeURIComponent(hackatimeId)}&d=${yesterdayStr}`;
+  const votesUrl = `https://summer.hackclub.com/admin/blazer/queries/44-votes-fraud-check?user_id=${userId}`;
+  
+  let hackatimeData = null;
+  if (slackId) {
+    try {
+      hackatimeData = await fetchHackatimeStats(slackId);
+    } catch (error) {
+      console.warn('SOM Utils: Failed to fetch Hackatime stats:', error);
+    }
+  }
+  
+  const billyGridItem = document.createElement('div');
+  billyGridItem.className = 'som-enhanced-hackatime';
+  billyGridItem.innerHTML = `
+    <strong>Billy:</strong><br>
+    <a href="${billyUrl}" target="_blank" style="color: var(--color-primary);">
+      View ${hackatimeId} profile
+    </a>
+  `;
+  existingGrid.appendChild(billyGridItem);
+  
+  const fraudGridItem = document.createElement('div');
+  fraudGridItem.className = 'som-enhanced-hackatime';
+  fraudGridItem.innerHTML = `
+    <strong>Vote Fraud Check:</strong><br>
+    <a href="${votesUrl}" target="_blank" style="color: var(--color-primary);">
+      View votes query
+    </a>
+  `;
+  existingGrid.appendChild(fraudGridItem);
+  
+  if (hackatimeData && hackatimeData.data) {
+    const data = hackatimeData.data;
+    const trust = hackatimeData.trust_factor;
+    
+    const startDate = new Date('2025-06-16');
+    const today = new Date();
+    const daysSinceStart = Math.ceil((today - startDate) / (1000 * 60 * 60 * 24));
+    const somAvgHours = (data.total_seconds / 3600 / daysSinceStart).toFixed(2);
+    
+    const apiDataGridItem = document.createElement('div');
+    apiDataGridItem.className = 'som-enhanced-hackatime';
+    apiDataGridItem.innerHTML = `
+      <strong>API Total Time:</strong><br>
+      ${data.human_readable_total}
+    `;
+    existingGrid.appendChild(apiDataGridItem);
+    
+    const avgGridItem = document.createElement('div');
+    avgGridItem.className = 'som-enhanced-hackatime';
+    avgGridItem.innerHTML = `
+      <strong>SOM Daily Avg:</strong><br>
+      ${somAvgHours} hours/day
+    `;
+    existingGrid.appendChild(avgGridItem);
+    
+    const trustGridItem = document.createElement('div');
+    const trustColor = getTrustColor(trust.trust_level);
+    trustGridItem.className = 'som-enhanced-hackatime';
+    trustGridItem.innerHTML = `
+      <strong>Trust Level:</strong><br>
+      <span class="pill pill-${trustColor}">${trust.trust_level}</span> (${trust.trust_value})
+    `;
+    existingGrid.appendChild(trustGridItem);
+  }
+}
+
+function extractHackatimeId() {
+  const timelineLinks = document.querySelectorAll('a[href*="timeline"]');
+  for (const link of timelineLinks) {
+    const urlMatch = link.href.match(/user_ids=(\d+)/);
+    if (urlMatch) {
+      return urlMatch[1];
+    }
+  }
+  
+  const pageText = document.body.textContent;
+  const hackatimeIdMatch = pageText.match(/hackatime\s+id\s*:?\s*(\d+)/i);
+  if (hackatimeIdMatch) {
+    return hackatimeIdMatch[1];
+  }
+
+  const hackatimePatterns = [
+    /timeline\?user_ids=(\d+)/,
+    /hackatime.*?(\d{3,6})/i
+  ];
+  
+  for (const pattern of hackatimePatterns) {
+    const match = pageText.match(pattern);
+    if (match) {
+      return match[1];
+    }
+  }
+  
+  const strongElements = document.querySelectorAll('strong');
+  for (const strong of strongElements) {
+    if (strong.textContent.toLowerCase().includes('hackatime id')) {
+      const nextSibling = strong.nextSibling;
+      const parent = strong.parentElement;
+      
+      if (nextSibling && nextSibling.nodeType === Node.TEXT_NODE) {
+        const idMatch = nextSibling.textContent.match(/(\d{3,6})/);
+        if (idMatch) return idMatch[1];
+      }
+      
+      if (parent) {
+        const idMatch = parent.textContent.match(/hackatime id\s*:?\s*(\d{3,6})/i);
+        if (idMatch) return idMatch[1];
+      }
+    }
+  }
+  
+  const links = document.querySelectorAll('a[href*="hackatime"], a[href*="wakatime"]');
+  for (const link of links) {
+    const urlMatch = link.href.match(/(?:hackatime|wakatime).*[\/=@](\d+)/);
+    if (urlMatch) {
+      return urlMatch[1];
+    }
+  }
+  
+  return null;
+}
+
+function extractSlackId() {
+  const pageText = document.body.textContent;
+  
+  const slackIdPatterns = [
+    /slack[\s:]*([A-Z0-9]{9,11})/i,
+    /slack id[\s:]*([A-Z0-9]{9,11})/i,
+    /@([A-Z0-9]{9,11})/,
+    /U[A-Z0-9]{8,10}/g
+  ];
+  
+  for (const pattern of slackIdPatterns) {
+    const match = pageText.match(pattern);
+    if (match) {
+      return match[1] || match[0];
+    }
+  }
+  
+  const elements = document.querySelectorAll('*');
+  for (const element of elements) {
+    const text = element.textContent;
+    if (text && text.match(/^U[A-Z0-9]{8,10}$/)) {
+      return text;
+    }
+  }
+  
+  return null;
+}
+
+async function fetchHackatimeStats(slackId) {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(
+      { action: 'fetchHackatimeStats', slackId: slackId },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+          return;
+        }
+        
+        if (response && response.success) {
+          resolve(response.data);
+        } else {
+          reject(response?.error || 'Unknown error');
+        }
+      }
+    );
+  });
+}
+
+function getTrustColor(trustLevel) {
+  switch (trustLevel?.toLowerCase()) {
+    case 'green': return 'green';
+    case 'red': return 'red';
+    case 'yellow': return 'yellow';
+    case 'blue': return 'blue';
+  }
+}
+
+function extractTotalHackatimeHours() {
+  const pageText = document.body.textContent;
+  
+  const hourPatterns = [
+    /(\d+\.?\d*)\s*hours?\s*total/i,
+    /total[\s:]*(\d+\.?\d*)\s*hours?/i,
+    /(\d+)h\s*(\d+)m/i,
+    /(\d+\.?\d*)\s*hrs?/i
+  ];
+  
+  for (const pattern of hourPatterns) {
+    const match = pageText.match(pattern);
+    if (match) {
+      if (pattern.source.includes('(\\d+)h')) {
+        return parseFloat(match[1]) + parseFloat(match[2] || 0) / 60;
+      } else {
+        return parseFloat(match[1]);
+      }
+    }
+  }
+  
+  return null;
+}
+
 function processCurrentPage() {
   const currentPath = window.location.pathname;
   const now = Date.now();
@@ -6193,6 +6441,8 @@ function processCurrentPage() {
       processBlackMarketPage();
     } else if (currentPath === '/campfire') {
       processCampfirePage();
+    } else if (currentPath.match(/^\/admin\/users\/\d+$/)) {
+      processAdminUserPage();
     } else {
       processProjectCards();
     }
