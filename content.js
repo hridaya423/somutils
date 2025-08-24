@@ -6148,21 +6148,21 @@ function addStyleToggle() {
 function processAdminUserPage() {
   const allHeaders = document.querySelectorAll('h1, h2, h3, h4, .font-bold, .text-lg, .text-xl, strong, b');
   let hackatimeSection = null;
-  
+
   for (const header of allHeaders) {
     if (header.textContent.toLowerCase().includes('hackatime')) {
-      hackatimeSection = header.closest('div.card, div.bg-white, div.border, div.p-4, div.mb-4') || 
-                        header.closest('div') || 
+      hackatimeSection = header.closest('div.card, div.bg-white, div.border, div.p-4, div.mb-4') ||
+                        header.closest('div') ||
                         header.parentElement;
       break;
     }
   }
-  
-  if (!hackatimeSection) {
-    return;
+
+  if (hackatimeSection) {
+    processHackatimeSection(hackatimeSection);
   }
-  
-  processHackatimeSection(hackatimeSection);
+
+  addShopOrdersSummaryToUserPage();
 }
 
 async function processHackatimeSection(section) {
@@ -6651,6 +6651,79 @@ function getStateColor(state) {
       return '#ef4444';
     default:
       return '#6b7280';
+  }
+}
+
+async function addShopOrdersSummaryToUserPage() {
+  if (document.querySelector('.som-user-shop-orders-summary')) {
+    return;
+  }
+
+  const userIdMatch = window.location.pathname.match(/\/admin\/users\/(\d+)/);
+  if (!userIdMatch) {
+    return;
+  }
+
+  const userId = userIdMatch[1];
+
+  try {
+    const shopOrdersData = await fetchShopOrdersData(userId);
+
+    if (shopOrdersData && shopOrdersData.length > 0) {
+      createShopOrdersSummarySection(shopOrdersData);
+    }
+  } catch (error) {
+    console.warn('SOM Utils: Failed to fetch shop orders for user page:', error);
+  }
+}
+
+function createShopOrdersSummarySection(ordersData) {
+  const ordersSummary = processComprehensiveOrdersSummary(ordersData);
+
+  const summarySection = document.createElement('div');
+  summarySection.className = 'asec som-user-shop-orders-summary';
+  summarySection.style.cssText = 'padding: 1.5em; margin-top: 1em;';
+
+  summarySection.innerHTML = `
+    <h2>Shop Orders Summary</h2>
+    <b>Total Orders:</b> ${ordersData.length}<br>
+    <b>Fulfilled:</b> ${ordersSummary.fulfilled}<br>
+    <b>Pending:</b> ${ordersSummary.pending}<br>
+    <b>Rejected:</b> ${ordersSummary.rejected}<br>
+    <b>Total Quantity:</b> ${ordersSummary.totalQuantity}<br>
+    <b>On Hold:</b> ${ordersSummary.onHold}<br>
+    <b>Awaiting Fulfillment:</b> ${ordersSummary.awaitingFulfillment}<br>
+    <br>
+    <details>
+      <summary>View All Orders (${ordersData.length})</summary>
+      <div style="margin-top: 10px;">
+        ${ordersData.map(order => createSimpleOrderText(order)).join('<hr style="margin: 10px 0;">')}
+      </div>
+    </details>
+  `;
+
+  const mainContent = document.querySelector('main') || document.querySelector('.container') || document.body;
+  const existingSections = mainContent.querySelectorAll('.asec, .card, .bg-white, .border');
+
+  let insertAfter = null;
+  for (const section of existingSections) {
+    if (section.textContent.toLowerCase().includes('hackatime') ||
+        section.textContent.toLowerCase().includes('timeline') ||
+        section.textContent.toLowerCase().includes('activity')) {
+      insertAfter = section;
+      break;
+    }
+  }
+
+  if (insertAfter) {
+    insertAfter.parentNode.insertBefore(summarySection, insertAfter.nextSibling);
+  } else {
+    const firstSection = existingSections[0];
+    if (firstSection) {
+      firstSection.parentNode.insertBefore(summarySection, firstSection);
+    } else {
+      mainContent.appendChild(summarySection);
+    }
   }
 }
 
