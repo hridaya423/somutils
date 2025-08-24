@@ -6223,12 +6223,15 @@ async function processHackatimeSection(section) {
   if (hackatimeData && hackatimeData.data) {
     const data = hackatimeData.data;
     const trust = hackatimeData.trust_factor;
-    
+    const displayedTotalTime = extractTotalHackatimeHours();
     const startDate = new Date('2025-06-16');
     const today = new Date();
     const daysSinceStart = Math.ceil((today - startDate) / (1000 * 60 * 60 * 24));
-    const somAvgHours = (data.total_seconds / 3600 / daysSinceStart).toFixed(2);
-    
+
+    let somAvgHours = 'N/A';
+    if (displayedTotalTime !== null) {
+      somAvgHours = (displayedTotalTime / daysSinceStart).toFixed(2);
+    }
     const apiDataGridItem = document.createElement('div');
     apiDataGridItem.className = 'som-enhanced-hackatime';
     apiDataGridItem.innerHTML = `
@@ -6236,7 +6239,6 @@ async function processHackatimeSection(section) {
       ${data.human_readable_total}
     `;
     existingGrid.appendChild(apiDataGridItem);
-    
     const avgGridItem = document.createElement('div');
     avgGridItem.className = 'som-enhanced-hackatime';
     avgGridItem.innerHTML = `
@@ -6244,7 +6246,6 @@ async function processHackatimeSection(section) {
       ${somAvgHours} hours/day
     `;
     existingGrid.appendChild(avgGridItem);
-    
     const trustGridItem = document.createElement('div');
     const trustColor = getTrustColor(trust.trust_level);
     trustGridItem.className = 'som-enhanced-hackatime';
