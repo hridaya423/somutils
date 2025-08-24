@@ -36,6 +36,7 @@ Compatible with Chrome, Firefox and Safari!
 - **Black Market**: Support for black market shop items and enhanced estimates and you get preferred customer for free
 - **Free Sunglasses**: you get sunglasses for free!
 - **Ship Data**: Ship-by-ship efficiency tracking and a beautiful graph to see ship efficiency if you have multiple
+- **Stats for admins**: Useful stats for admins, like direct vote check link, orders, rejection reasons etc. on users & shop orders.
 
 ## Installation
 
