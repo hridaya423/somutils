@@ -48,6 +48,30 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
   
+  if (request.action === 'fetchShopOrders') {
+    fetchShopOrders(request.userId, request.csrfToken)
+      .then(data => {
+        sendResponse({ success: true, data: data });
+      })
+      .catch(error => {
+        console.error('SOM Utils Background: Error fetching shop orders:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true;
+  }
+  
+  if (request.action === 'executeInPageContext') {
+    executeShopOrdersInPageContext(sender.tab.id, request.userId, request.csrfToken)
+      .then(data => {
+        sendResponse({ success: true, data: data });
+      })
+      .catch(error => {
+        console.error('SOM Utils Background: Error executing in page context:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true;
+  }
+  
 });
 
 function findUserByAvatarAndName(users, username, avatarUrl) {
@@ -232,5 +256,204 @@ async function fetchHackatimeStats(slackId) {
     console.error('Hackatime fetch error:', error);
     throw error;
   }
+}
+
+async function fetchShopOrders(userId, csrfToken) {
+  if (!userId) {
+    throw new Error('User ID is required');
+  }
+  
+  if (!csrfToken) {
+    throw new Error('CSRF token is required');
+  }
+  
+  try {
+    const runId = crypto.randomUUID();
+    const body = new URLSearchParams({
+      statement: "SELECT * FROM shop_orders WHERE user_id = {user_id}",
+      query_id: "45",
+      data_source: "main",
+      "variables[user_id]": userId,
+      run_id: runId
+    });
+
+    const response = await fetch("https://summer.hackclub.com/admin/blazer/queries/run", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "Accept": "text/html, */*; q=0.01",
+        "X-CSRF-Token": csrfToken,
+        "X-Requested-With": "XMLHttpRequest",
+        "Referer": `https://summer.hackclub.com/admin/blazer/queries/45-get-shop-orders?user_id=${userId}`
+      },
+      body: body.toString()
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const responseText = await response.text();
+    
+    return parseShopOrdersFromHTML(responseText);
+  } catch (error) {
+    console.error('Shop orders fetch error:', error);
+    throw error;
+  }
+}
+
+function parseShopOrdersFromHTML(html) {
+  const jsonMatch = html.match(/data-results="([^"]+)"/);
+  if (jsonMatch) {
+    try {
+      const jsonData = JSON.parse(jsonMatch[1].replace(/&quot;/g, '"'));
+      return jsonData;
+    } catch (e) {
+      console.error('Failed to parse JSON from HTML:', e);
+    }
+  }
+  
+  return [];
+}
+
+async function executeShopOrdersInPageContext(tabId, userId, csrfToken) {
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      func: fetchShopOrdersInPage,
+      args: [userId, csrfToken]
+    });
+    
+    if (results && results[0] && results[0].result) {
+      return results[0].result;
+    } else {
+      throw new Error('No results returned from page execution');
+    }
+  } catch (error) {
+    console.error('Execute script error:', error);
+    throw error;
+  }
+}
+
+async function fetchShopOrdersInPage(userId, csrfToken) {
+  function parseShopOrdersFromHTML(html) {
+    const jsonMatch = html.match(/data-results="([^"]+)"/);
+    if (jsonMatch) {
+      try {
+        const jsonData = JSON.parse(jsonMatch[1].replace(/&quot;/g, '"'));
+        return jsonData;
+      } catch (e) {
+        console.error('Failed to parse JSON from HTML:', e);
+      }
+    }
+    
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const table = doc.querySelector('table');
+    
+    if (table) {
+      const rows = table.querySelectorAll('tbody tr');
+      const orders = [];
+      
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 2) {
+          orders.push({
+            id: cells[0]?.textContent?.trim(),
+            quantity: cells[1]?.textContent?.trim(),
+            aasm_state: cells[2]?.textContent?.trim(),
+            created_at: cells[3]?.textContent?.trim(),
+            updated_at: cells[4]?.textContent?.trim(),
+            rejection_reason: cells[5]?.textContent?.trim(),
+            rejected_at: cells[6]?.textContent?.trim(),
+            fulfilled_at: cells[7]?.textContent?.trim(),
+            awaiting_periodical_fulfillment_at: cells[8]?.textContent?.trim(),
+            on_hold_at: cells[9]?.textContent?.trim(),
+            internal_notes: cells[10]?.textContent?.trim()
+          });
+        }
+      });
+      return orders;
+    }
+    
+    return [];
+  }
+
+  try {
+    const runId = crypto.randomUUID();
+    const body = new URLSearchParams({
+      statement: "SELECT id, quantity, aasm_state, created_at, updated_at, rejection_reason, rejected_at, fulfilled_at, awaiting_periodical_fulfillment_at, on_hold_at, internal_notes FROM shop_orders WHERE user_id = {user_id} ORDER BY created_at DESC",
+      query_id: "45",
+      data_source: "main",
+      "variables[user_id]": userId,
+      run_id: runId
+    });
+
+    const response = await fetch("/admin/blazer/queries/run", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "Accept": "text/html, */*; q=0.01",
+        "X-CSRF-Token": csrfToken,
+        "X-Requested-With": "XMLHttpRequest"
+      },
+      body: body.toString()
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const responseText = await response.text();
+    
+    return parseShopOrdersFromHTML(responseText);
+  } catch (error) {
+    throw error;
+  }
+}
+
+function parseShopOrdersFromHTML(html) {
+  const jsonMatch = html.match(/data-results="([^"]+)"/);
+  if (jsonMatch) {
+    try {
+      const jsonData = JSON.parse(jsonMatch[1].replace(/&quot;/g, '"'));
+      return jsonData;
+    } catch (e) {
+    }
+  }
+  
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const table = doc.querySelector('table');
+  
+  if (table) {
+    const rows = table.querySelectorAll('tbody tr');
+    const orders = [];
+    
+    rows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells.length >= 2) {
+        orders.push({
+          id: cells[0]?.textContent?.trim(),
+          quantity: cells[1]?.textContent?.trim(),
+          aasm_state: cells[2]?.textContent?.trim(),
+          created_at: cells[3]?.textContent?.trim(),
+          updated_at: cells[4]?.textContent?.trim(),
+          rejection_reason: cells[5]?.textContent?.trim(),
+          rejected_at: cells[6]?.textContent?.trim(),
+          fulfilled_at: cells[7]?.textContent?.trim(),
+          awaiting_periodical_fulfillment_at: cells[8]?.textContent?.trim(),
+          on_hold_at: cells[9]?.textContent?.trim(),
+          internal_notes: cells[10]?.textContent?.trim()
+        });
+      }
+    });
+    
+    return orders;
+  }
+  
+  return [];
 }
 

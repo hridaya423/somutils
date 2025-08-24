@@ -6393,9 +6393,274 @@ function extractTotalHackatimeHours() {
   return null;
 }
 
+async function processShopOrderAdminPage() {
+  if (document.querySelector('.som-shop-order-enhancement')) {
+    return;
+  }
+  
+  const asecSections = document.querySelectorAll('.asec');
+  let customerSection = null;
+  
+  for (const section of asecSections) {
+    if (section.textContent.toLowerCase().includes('customer')) {
+      customerSection = section;
+      break;
+    }
+  }
+  
+  if (!customerSection) {
+    return;
+  }
+  
+  const userId = extractUserIdFromCustomerSection(customerSection);
+  if (!userId) {
+    return;
+  }
+  
+  try {
+    const shopOrdersData = await fetchShopOrdersData(userId);
+    
+    if (shopOrdersData && shopOrdersData.length > 0) {
+      addShopOrdersInfoToPage(customerSection, shopOrdersData);
+    }
+  } catch (error) {
+  }
+}
+
+function extractUserIdFromCustomerSection(section) {
+  const userLink = section.querySelector('a[href*="/admin/users/"]');
+  if (userLink) {
+    const match = userLink.href.match(/\/admin\/users\/(\d+)/);
+    if (match) {
+      return match[1];
+    }
+  }
+  
+  const anyUserLink = document.querySelector('a[href*="/admin/users/"]');
+  if (anyUserLink) {
+    const match = anyUserLink.href.match(/\/admin\/users\/(\d+)/);
+    if (match) {
+      return match[1];
+    }
+  }
+  
+  const sectionText = section.textContent;
+  const userIdMatch = sectionText.match(/\/admin\/users\/(\d+)/);
+  if (userIdMatch) {
+    return userIdMatch[1];
+  }
+  
+  const pageText = document.body.textContent;
+  const pageUserIdMatch = pageText.match(/\/admin\/users\/(\d+)/);
+  if (pageUserIdMatch) {
+    return pageUserIdMatch[1];
+  }
+  
+  return null;
+}
+
+function extractCSRFToken() {
+  const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+  if (csrfMeta) {
+    return csrfMeta.getAttribute('content');
+  }
+  
+  const csrfInput = document.querySelector('input[name="authenticity_token"]');
+  if (csrfInput) {
+    return csrfInput.value;
+  }
+  
+  return null;
+}
+
+async function fetchShopOrdersData(userId) {
+  const csrfToken = extractCSRFToken();
+  
+  if (!csrfToken) {
+    throw new Error('CSRF token not found on page');
+  }
+  
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(
+      { 
+        action: 'executeInPageContext', 
+        userId: userId, 
+        csrfToken: csrfToken 
+      },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+          return;
+        }
+        
+        if (response && response.success) {
+          resolve(response.data);
+        } else {
+          reject(new Error(response?.error || 'Unknown error'));
+        }
+      }
+    );
+  });
+}
+
+function addShopOrdersInfoToPage(customerSection, ordersData) {
+  const enhancementSection = document.createElement('div');
+  enhancementSection.className = 'asec som-shop-order-enhancement';
+  enhancementSection.style.cssText = 'padding: 1.5em; margin-top: 1em;';
+  
+  const ordersSummary = processComprehensiveOrdersSummary(ordersData);
+  
+  enhancementSection.innerHTML = `
+    <h2>Shop Orders Summary</h2>
+    <b>Total Orders:</b> ${ordersData.length}<br>
+    <b>Fulfilled:</b> ${ordersSummary.fulfilled}<br>
+    <b>Pending:</b> ${ordersSummary.pending}<br>
+    <b>Rejected:</b> ${ordersSummary.rejected}<br>
+    <b>Total Quantity:</b> ${ordersSummary.totalQuantity}<br>
+    <b>On Hold:</b> ${ordersSummary.onHold}<br>
+    <b>Awaiting Fulfillment:</b> ${ordersSummary.awaitingFulfillment}<br>
+    <br>
+    <details>
+      <summary>View All Orders (${ordersData.length})</summary>
+      <div style="margin-top: 10px;">
+        ${ordersData.map(order => createSimpleOrderText(order)).join('<hr style="margin: 10px 0;">')}
+      </div>
+    </details>
+  `;
+  
+  customerSection.parentNode.insertBefore(enhancementSection, customerSection.nextSibling);
+}
+
+
+function processComprehensiveOrdersSummary(orders) {
+  const summary = {
+    fulfilled: 0,
+    pending: 0,
+    rejected: 0,
+    onHold: 0,
+    awaitingFulfillment: 0,
+    totalQuantity: 0,
+    ordersWithNotes: 0,
+    recentOrders: 0,
+    avgProcessingTime: 'N/A'
+  };
+  
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  let totalProcessingTime = 0;
+  let processedOrders = 0;
+  
+  orders.forEach(order => {
+    const state = order.aasm_state?.toLowerCase() || '';
+    const quantity = parseInt(order.quantity) || 1;
+    
+    if (state.includes('fulfilled') || state === 'completed') {
+      summary.fulfilled++;
+    } else if (state.includes('pending') || state === 'created') {
+      summary.pending++;
+    } else if (state.includes('rejected') || state === 'cancelled') {
+      summary.rejected++;
+    }
+    
+    if (order.on_hold_at && order.on_hold_at !== '') {
+      summary.onHold++;
+    }
+    if (order.awaiting_periodical_fulfillment_at && order.awaiting_periodical_fulfillment_at !== '') {
+      summary.awaitingFulfillment++;
+    }
+    
+    summary.totalQuantity += quantity;
+    
+    if (order.internal_notes && order.internal_notes.trim() !== '') {
+      summary.ordersWithNotes++;
+    }
+    
+    if (order.created_at) {
+      const createdDate = new Date(order.created_at);
+      if (createdDate >= sevenDaysAgo) {
+        summary.recentOrders++;
+      }
+      
+      if (order.fulfilled_at && summary.fulfilled > 0) {
+        const fulfilledDate = new Date(order.fulfilled_at);
+        const processingTime = fulfilledDate - createdDate;
+        totalProcessingTime += processingTime;
+        processedOrders++;
+      }
+    }
+  });
+  
+  if (processedOrders > 0) {
+    const avgMs = totalProcessingTime / processedOrders;
+    const avgDays = Math.round(avgMs / (1000 * 60 * 60 * 24));
+    summary.avgProcessingTime = avgDays > 0 ? `${avgDays} days` : '< 1 day';
+  }
+  
+  return summary;
+}
+
+function createSimpleOrderText(order) {
+  const createdDate = order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A';
+  const quantity = order.quantity || '1';
+  
+  let orderText = `<b><a href="/admin/shop_orders/${order.id}" target="_blank" style="color: var(--color-primary);">Order #${order.id}</a></b><br>`;
+  orderText += `State: <b>${order.aasm_state || 'unknown'}</b> | Quantity: ${quantity} | Created: ${createdDate}<br>`;
+  
+  if (order.fulfilled_at) {
+    orderText += `Fulfilled: ${new Date(order.fulfilled_at).toLocaleDateString()}<br>`;
+  } else if (order.awaiting_periodical_fulfillment_at) {
+    orderText += `Awaiting Fulfillment: ${new Date(order.awaiting_periodical_fulfillment_at).toLocaleDateString()}<br>`;
+  }
+  
+  if (order.rejected_at) {
+    orderText += `Rejected: ${new Date(order.rejected_at).toLocaleDateString()}`;
+    if (order.rejection_reason) {
+      orderText += ` - Reason: ${order.rejection_reason}`;
+    }
+    orderText += '<br>';
+  }
+  
+  if (order.on_hold_at) {
+    orderText += `On Hold: ${new Date(order.on_hold_at).toLocaleDateString()}<br>`;
+  }
+  
+  if (order.internal_notes && order.internal_notes.trim()) {
+    orderText += `Internal Notes: ${order.internal_notes}<br>`;
+  }
+  
+  if (order.on_hold_at || (order.updated_at && !order.fulfilled_at && !order.rejected_at)) {
+    orderText += `Last Updated: ${order.updated_at ? new Date(order.updated_at).toLocaleDateString() : 'N/A'}`;
+  }
+  
+  return orderText;
+}
+
+function getStateColor(state) {
+  switch (state?.toLowerCase()) {
+    case 'completed':
+    case 'delivered':
+    case 'fulfilled':
+      return '#22c55e';
+    case 'pending':
+    case 'processing':
+    case 'created':
+      return '#f59e0b';
+    case 'cancelled':
+    case 'canceled':
+    case 'rejected':
+      return '#ef4444';
+    default:
+      return '#6b7280';
+  }
+}
+
 function processCurrentPage() {
   const currentPath = window.location.pathname;
   const now = Date.now();
+
+  if (currentPath.includes('/admin/shop_orders/') && !window.somUtilsShopOrderLogged) {
+    window.somUtilsShopOrderLogged = true;
+  }
   
   if (now - lastProcessTime < 1000 || isProcessing) {
     return;
@@ -6443,6 +6708,8 @@ function processCurrentPage() {
       processCampfirePage();
     } else if (currentPath.match(/^\/admin\/users\/\d+$/)) {
       processAdminUserPage();
+    } else if (currentPath.match(/^\/admin\/shop_orders\/\d+$/)) {
+      processShopOrderAdminPage();
     } else {
       processProjectCards();
     }

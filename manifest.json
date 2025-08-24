@@ -4,7 +4,8 @@
   "version": "1.5",
   "description": "Chrome extension for useful stats on Hack Club's Summer of Making",
   "permissions": [
-    "activeTab"
+    "activeTab",
+    "scripting"
   ],
   "host_permissions": [
     "https://summer.hackclub.com/*",
