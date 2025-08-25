@@ -1765,7 +1765,11 @@ function addShellsPerHourToCard(card) {
     if (text.match(/\d+[hm]/)) {
       timeText = text.split('\n')[0];
     }
-    if (text.includes('shells') || text.includes('ship this project')) {
+    if ((text.includes('shells') || text.includes('ship this project')) && 
+        !text.includes('payout is on hold') && 
+        !text.includes('vote') && 
+        !text.includes('voting') && 
+        !text.includes('Start voting')) {
       shellsText = text;
     }
     if (text.includes('Project is awaiting ship certification!')) {
@@ -2420,7 +2424,11 @@ function extractProjectSortingData(card, index) {
     if (text.match(/\d+[hm]/)) {
       timeText = text.split('\n')[0];
     }
-    if (text.includes('shells') || text.includes('ship this project')) {
+    if ((text.includes('shells') || text.includes('ship this project')) && 
+        !text.includes('payout is on hold') && 
+        !text.includes('vote') && 
+        !text.includes('voting') && 
+        !text.includes('Start voting')) {
       shellsText = text;
     }
     if (text.includes('Project is awaiting ship certification!')) {
