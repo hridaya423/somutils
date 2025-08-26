@@ -163,9 +163,16 @@ function parseShellsString(shellsText) {
     return 0;
   }
   
-    if (shellsText.includes("Project is awaiting ship certification!")) {
-      return -1;
-    }
+  if (shellsText.includes("Project is awaiting ship certification!")) {
+    return -1;
+  }
+  
+  if (shellsText.includes("payout is on hold") || 
+      shellsText.includes("need") && shellsText.includes("vote") && shellsText.includes("shells") ||
+      shellsText.includes("Start voting") ||
+      shellsText.includes("more vote")) {
+    return 0;
+  }
   
   if (shellsText.includes("To get shells, ship this project!")) {
     return 0;
@@ -1769,7 +1776,10 @@ function addShellsPerHourToCard(card) {
         !text.includes('payout is on hold') && 
         !text.includes('vote') && 
         !text.includes('voting') && 
-        !text.includes('Start voting')) {
+        !text.includes('Start voting') &&
+        !text.includes('need') && 
+        !text.includes('more vote') &&
+        !(text.includes('need') && text.includes('vote') && text.includes('release'))) {
       shellsText = text;
     }
     if (text.includes('Project is awaiting ship certification!')) {
@@ -1837,6 +1847,11 @@ function addShellsPerHourToCard(card) {
   }
   
   if (displayElement && !displayElement.classList.contains('som-utils-corner-badge')) {
+    const cardText = card.textContent || '';
+    if (cardText.includes('payout is on hold') || cardText.includes('Start voting')) {
+      return;
+    }
+    
     const lastGrayText = card.querySelector('p.text-gray-400:last-of-type');
     if (lastGrayText && lastGrayText.parentNode) {
       lastGrayText.parentNode.insertBefore(displayElement, lastGrayText.nextSibling);
@@ -2428,7 +2443,10 @@ function extractProjectSortingData(card, index) {
         !text.includes('payout is on hold') && 
         !text.includes('vote') && 
         !text.includes('voting') && 
-        !text.includes('Start voting')) {
+        !text.includes('Start voting') &&
+        !text.includes('need') && 
+        !text.includes('more vote') &&
+        !(text.includes('need') && text.includes('vote') && text.includes('release'))) {
       shellsText = text;
     }
     if (text.includes('Project is awaiting ship certification!')) {
