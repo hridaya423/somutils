@@ -6421,9 +6421,12 @@ function extractTotalHackatimeHours() {
 }
 
 async function processShopOrderAdminPage() {
-  if (document.querySelector('.som-shop-order-enhancement')) {
+  if (document.querySelector('.som-shop-order-enhancement') || 
+      document.querySelector('.som-shop-orders-processed')) {
     return;
   }
+  
+  document.body.classList.add('som-shop-orders-processed');
   
   const asecSections = document.querySelectorAll('.asec');
   let customerSection = null;
@@ -6531,6 +6534,10 @@ async function fetchShopOrdersData(userId) {
 }
 
 function addShopOrdersInfoToPage(customerSection, ordersData) {
+  if (document.querySelector('.som-shop-order-enhancement')) {
+    return;
+  }
+  
   const enhancementSection = document.createElement('div');
   enhancementSection.className = 'asec som-shop-order-enhancement';
   enhancementSection.style.cssText = 'padding: 1.5em; margin-top: 1em;';
@@ -6682,9 +6689,12 @@ function getStateColor(state) {
 }
 
 async function addShopOrdersSummaryToUserPage() {
-  if (document.querySelector('.som-user-shop-orders-summary')) {
+  if (document.querySelector('.som-user-shop-orders-summary') ||
+      document.querySelector('.som-user-shop-orders-processed')) {
     return;
   }
+  
+  document.body.classList.add('som-user-shop-orders-processed');
 
   const userIdMatch = window.location.pathname.match(/\/admin\/users\/(\d+)/);
   if (!userIdMatch) {
@@ -6705,6 +6715,10 @@ async function addShopOrdersSummaryToUserPage() {
 }
 
 function createShopOrdersSummarySection(ordersData) {
+  if (document.querySelector('.som-user-shop-orders-summary')) {
+    return;
+  }
+  
   const ordersSummary = processComprehensiveOrdersSummary(ordersData);
 
   const summarySection = document.createElement('div');
@@ -6757,6 +6771,10 @@ function createShopOrdersSummarySection(ordersData) {
 function processCurrentPage() {
   const currentPath = window.location.pathname;
   const now = Date.now();
+  if (window.lastProcessedPath !== currentPath) {
+    document.body.classList.remove('som-shop-orders-processed', 'som-user-shop-orders-processed');
+    window.lastProcessedPath = currentPath;
+  }
 
   if (currentPath.includes('/admin/shop_orders/') && !window.somUtilsShopOrderLogged) {
     window.somUtilsShopOrderLogged = true;
