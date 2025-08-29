@@ -65,6 +65,9 @@ jobs:
         [ -f background.js ] && cp background.js temp-chrome-extension/
         [ -f content.js ] && cp content.js temp-chrome-extension/
         [ -f styles.css ] && cp styles.css temp-chrome-extension/
+        [ -f popup.html ] && cp popup.html temp-chrome-extension/
+        [ -f popup.js ] && cp popup.js temp-chrome-extension/
+        [ -f popup.css ] && cp popup.css temp-chrome-extension/
         [ -f icon16.png ] && cp icon16.png temp-chrome-extension/
         [ -f icon48.png ] && cp icon48.png temp-chrome-extension/
         [ -f icon128.png ] && cp icon128.png temp-chrome-extension/
@@ -74,6 +77,9 @@ jobs:
         [ -f wasm_base64.txt ] && cp wasm_base64.txt temp-chrome-extension/
         [ -f chart.min.js ] && cp chart.min.js temp-chrome-extension/
         [ -f chartjs-adapter-date-fns.bundle.min.js ] && cp chartjs-adapter-date-fns.bundle.min.js temp-chrome-extension/
+        
+        # Copy themes directory if it exists
+        [ -d themes ] && cp -r themes temp-chrome-extension/
         
         # Create Chrome ZIP
         cd temp-chrome-extension
@@ -97,6 +103,9 @@ jobs:
         [ -f background.js ] && cp background.js temp-firefox-extension/
         [ -f content.js ] && cp content.js temp-firefox-extension/
         [ -f styles.css ] && cp styles.css temp-firefox-extension/
+        [ -f popup.html ] && cp popup.html temp-firefox-extension/
+        [ -f popup.js ] && cp popup.js temp-firefox-extension/
+        [ -f popup.css ] && cp popup.css temp-firefox-extension/
         [ -f icon16.png ] && cp icon16.png temp-firefox-extension/
         [ -f icon48.png ] && cp icon48.png temp-firefox-extension/
         [ -f icon128.png ] && cp icon128.png temp-firefox-extension/
@@ -106,6 +115,9 @@ jobs:
         [ -f ai-detector.js ] && cp ai-detector.js temp-firefox-extension/
         [ -f chart.min.js ] && cp chart.min.js temp-firefox-extension/
         [ -f chartjs-adapter-date-fns.bundle.min.js ] && cp chartjs-adapter-date-fns.bundle.min.js temp-firefox-extension/
+        
+        # Copy themes directory if it exists
+        [ -d themes ] && cp -r themes temp-firefox-extension/
         
         # Create Firefox ZIP
         cd temp-firefox-extension
