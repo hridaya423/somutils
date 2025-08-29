@@ -6027,18 +6027,18 @@ function addVoteQualityIndicator() {
     const length = voteTextarea.value.length;
     let text, color, bgColor;
     
-    if (length < 10) {
-      text = length === 0 ? '' : 'slim';
+    if (length < 100) {
+      text = length === 0 ? '' : 'looking slim';
       color = '#8B7355';
       bgColor = 'rgba(139, 115, 85, 0.1)';
-    } else if (length < 40) {
-      text = 'getting there';
-      color = '#A0845C';
-      bgColor = 'rgba(160, 132, 92, 0.1)';
-    } else if (length < 60) {
-      text = 'looking good';
+    } else if (length < 150) {
+      text = 'good';
       color = '#6B5B47';
       bgColor = 'rgba(107, 91, 71, 0.1)';
+    } else if (length < 200) {
+      text = 'great';
+      color = '#A0845C';
+      bgColor = 'rgba(160, 132, 92, 0.1)';
     } else {
       text = 'excellent';
       color = '#5C4E3A';
