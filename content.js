@@ -3084,7 +3084,7 @@ function addLeaderboardNavigation() {
   
   const button = leaderboardNavItem.querySelector('button');
   button.addEventListener('click', () => {
-    window.open('https://summer.hackclub.com/leaderboard');
+    window.location.href = 'https://summer.hackclub.com/leaderboard';
   });
   
   const aiNavItem = navList.querySelector('.som-ai-assistant-nav');
