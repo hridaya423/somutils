@@ -1,5 +1,21 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const api = typeof browser !== 'undefined' ? browser : api;
+  const api = typeof browser !== 'undefined' ? browser : chrome;
+  
+  const executeScript = async (options) => {
+    if (api.scripting && api.scripting.executeScript) {
+      return await api.scripting.executeScript(options);
+    } else if (api.tabs && api.tabs.executeScript) {
+      const tabId = options.target.tabId;
+      const func = options.func;
+      const args = options.args || [];
+      
+      return await api.tabs.executeScript(tabId, {
+        code: `(${func.toString()})(${args.map(arg => JSON.stringify(arg)).join(', ')})`
+      });
+    } else {
+      throw new Error('Script execution not supported');
+    }
+  };
   
   const themeOptions = document.querySelectorAll('.theme-option');
   const customBuilder = document.getElementById('custom-builder');
@@ -135,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
       await removeAllThemes(tab.id);
 
       if (currentTheme === 'catppuccin') {
-        await api.scripting.executeScript({
+        await executeScript({
           target: { tabId: tab.id },
           func: () => {
             const link = document.createElement('link');
@@ -149,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await applyCustomCSS(tab.id);
       }
 
-      await api.scripting.executeScript({
+      await executeScript({
         target: { tabId: tab.id },
         func: (theme, colors) => {
           localStorage.setItem('somTheme', theme);
@@ -184,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
       await removeAllThemes(tab.id);
 
       if (currentTheme === 'catppuccin') {
-        await api.scripting.executeScript({
+        await executeScript({
           target: { tabId: tab.id },
           func: () => {
             const link = document.createElement('link');
@@ -198,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await applyCustomCSS(tab.id);
       }
 
-      await api.scripting.executeScript({
+      await executeScript({
         target: { tabId: tab.id },
         func: (theme, colors) => {
           localStorage.setItem('somTheme', theme);
@@ -240,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const wrappedCSS = `/* SOM Utils Custom Theme - DO NOT REMOVE */\n${cssContent}`;
       
-      await api.scripting.executeScript({
+      await executeScript({
         target: { tabId: tabId },
         func: (css) => {
           const style = document.createElement('style');
@@ -258,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function removeAllThemes(tabId) {
     try {
-      await api.scripting.executeScript({
+      await executeScript({
         target: { tabId: tabId },
         func: () => {
           const catppuccinLinks = document.querySelectorAll('link[href*="catpuccin.css"]');

@@ -1,3 +1,5 @@
+const api = typeof browser !== 'undefined' ? browser : chrome;
+
 window.somUtilsProjectionMode = true;
 
 class VoteEstimationService {
@@ -893,11 +895,11 @@ async function fetchUserRank(username, avatarUrl = null) {
   try {
     
     return new Promise((resolve) => {
-      chrome.runtime.sendMessage(
+      api.runtime.sendMessage(
         { action: 'fetchUserRank', username: username, avatarUrl: avatarUrl },
         (response) => {
-          if (chrome.runtime.lastError) {
-            console.error('SOM Utils: Runtime error:', chrome.runtime.lastError);
+          if (api.runtime.lastError) {
+            console.error('SOM Utils: Runtime error:', api.runtime.lastError);
             resolve(null);
             return;
           }
@@ -935,11 +937,11 @@ async function fetchEconomyData() {
   
   try {
     return new Promise((resolve) => {
-      chrome.runtime.sendMessage(
+      api.runtime.sendMessage(
         { action: 'fetchEconomyData' },
         (response) => {
-          if (chrome.runtime.lastError) {
-            console.error('SOM Utils: Runtime error:', chrome.runtime.lastError);
+          if (api.runtime.lastError) {
+            console.error('SOM Utils: Runtime error:', api.runtime.lastError);
             resolve(null);
             return;
           }
@@ -1900,13 +1902,13 @@ function getTotalHoursData() {
 }
 async function fetchUserNetWorth(username, avatarUrl = null) {
   return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage({
+    api.runtime.sendMessage({
       action: 'fetchUserNetWorth',
       username: username,
       avatarUrl: avatarUrl
     }, (response) => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message));
+      if (api.runtime.lastError) {
+        reject(new Error(api.runtime.lastError.message));
         return;
       }
       
@@ -6365,11 +6367,11 @@ function extractSlackId() {
 
 async function fetchHackatimeStats(slackId) {
   return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage(
+    api.runtime.sendMessage(
       { action: 'fetchHackatimeStats', slackId: slackId },
       (response) => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
+        if (api.runtime.lastError) {
+          reject(api.runtime.lastError);
           return;
         }
         
@@ -6507,15 +6509,15 @@ async function fetchShopOrdersData(userId) {
   }
   
   return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage(
+    api.runtime.sendMessage(
       { 
         action: 'executeInPageContext', 
         userId: userId, 
         csrfToken: csrfToken 
       },
       (response) => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
+        if (api.runtime.lastError) {
+          reject(api.runtime.lastError);
           return;
         }
         
@@ -6852,12 +6854,12 @@ async function applySavedTheme(theme, customColors) {
     if (theme === 'catppuccin') {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = chrome.runtime.getURL('themes/catpuccin.css');
+      link.href = api.runtime.getURL('themes/catpuccin.css');
       link.setAttribute('data-som-utils-theme', 'catppuccin');
       document.head.appendChild(link);
     } else if (theme === 'custom' && customColors) {
       try {
-        const response = await fetch(chrome.runtime.getURL('themes/custom.css'));
+        const response = await fetch(api.runtime.getURL('themes/custom.css'));
         let cssContent = await response.text();
         Object.keys(customColors).forEach(variable => {
           const color = customColors[variable];

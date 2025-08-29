@@ -1,6 +1,24 @@
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+const api = typeof browser !== 'undefined' ? browser : chrome;
+
+const executeScript = async (options) => {
+  if (api.scripting && api.scripting.executeScript) {
+    return await api.scripting.executeScript(options);
+  } else if (api.tabs && api.tabs.executeScript) {
+    const tabId = options.target.tabId;
+    const func = options.func;
+    const args = options.args || [];
+    
+    return await api.tabs.executeScript(tabId, {
+      code: `(${func.toString()})(${args.map(arg => JSON.stringify(arg)).join(', ')})`
+    });
+  } else {
+    throw new Error('Script execution not supported');
+  }
+};
+
+api.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url && tab.url.includes('summer.hackclub.com')) {
-    chrome.scripting.executeScript({
+    executeScript({
       target: { tabId: tabId },
       func: () => {
         const savedTheme = localStorage.getItem('somTheme');
@@ -19,7 +37,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 });
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+api.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   if (request.action === 'fetchUserRank') {
     fetchUserRank(request.username, request.avatarUrl)
@@ -340,7 +358,7 @@ function parseShopOrdersFromHTML(html) {
 
 async function executeShopOrdersInPageContext(tabId, userId, csrfToken) {
   try {
-    const results = await chrome.scripting.executeScript({
+    const results = await executeScript({
       target: { tabId: tabId },
       func: fetchShopOrdersInPage,
       args: [userId, csrfToken]
