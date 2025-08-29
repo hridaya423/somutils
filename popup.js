@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const api = typeof browser !== 'undefined' ? browser : api;
+  
   const themeOptions = document.querySelectorAll('.theme-option');
   const customBuilder = document.getElementById('custom-builder');
   const status = document.getElementById('status');
@@ -38,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'neutral-900': '#cdd6f4'
   };
 
-  chrome.storage.local.get(['somTheme', 'somCustomColors'], (result) => {
+  api.storage.local.get(['somTheme', 'somCustomColors'], (result) => {
     if (result.somTheme) {
       currentTheme = result.somTheme;
     }
@@ -83,6 +85,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function loadCustomColors() {
+    if (!catppuccinColors || typeof catppuccinColors !== 'object') return;
+    
     Object.keys(catppuccinColors).forEach(colorKey => {
       const input = document.getElementById(colorKey);
       if (input) {
@@ -95,6 +99,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let websiteUpdateTimeout;
 
   function attachColorInputListeners() {
+    if (!catppuccinColors || typeof catppuccinColors !== 'object') return;
+    
     Object.keys(catppuccinColors).forEach(colorKey => {
       const input = document.getElementById(colorKey);
       if (input) {
@@ -117,9 +123,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function applyWebsiteTheme() {
     try {
-      chrome.storage.local.set({ somTheme: currentTheme, somCustomColors: catppuccinColors });
+      api.storage.local.set({ somTheme: currentTheme, somCustomColors: catppuccinColors });
 
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const tabs = await api.tabs.query({ active: true, currentWindow: true });
+      const tab = tabs && tabs.length > 0 ? tabs[0] : null;
 
       if (!tab || !tab.url?.includes('summer.hackclub.com')) {
         return;
@@ -128,12 +135,12 @@ document.addEventListener('DOMContentLoaded', () => {
       await removeAllThemes(tab.id);
 
       if (currentTheme === 'catppuccin') {
-        await chrome.scripting.executeScript({
+        await api.scripting.executeScript({
           target: { tabId: tab.id },
           func: () => {
             const link = document.createElement('link');
             link.rel = 'stylesheet';
-            link.href = chrome.runtime.getURL('themes/catpuccin.css');
+            link.href = api.runtime.getURL('themes/catpuccin.css');
             link.setAttribute('data-som-utils-theme', 'catppuccin');
             document.head.appendChild(link);
           }
@@ -142,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await applyCustomCSS(tab.id);
       }
 
-      await chrome.scripting.executeScript({
+      await api.scripting.executeScript({
         target: { tabId: tab.id },
         func: (theme, colors) => {
           localStorage.setItem('somTheme', theme);
@@ -161,9 +168,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (withStatus) showStatus('loading', '⏳ Applying theme...');
     
     try {
-      chrome.storage.local.set({ somTheme: currentTheme, somCustomColors: catppuccinColors });
+      api.storage.local.set({ somTheme: currentTheme, somCustomColors: catppuccinColors });
 
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const tabs = await api.tabs.query({ active: true, currentWindow: true });
+      const tab = tabs && tabs.length > 0 ? tabs[0] : null;
 
       if (!tab || !tab.url?.includes('summer.hackclub.com')) {
         if (withStatus) {
@@ -176,12 +184,12 @@ document.addEventListener('DOMContentLoaded', () => {
       await removeAllThemes(tab.id);
 
       if (currentTheme === 'catppuccin') {
-        await chrome.scripting.executeScript({
+        await api.scripting.executeScript({
           target: { tabId: tab.id },
           func: () => {
             const link = document.createElement('link');
             link.rel = 'stylesheet';
-            link.href = chrome.runtime.getURL('themes/catpuccin.css');
+            link.href = api.runtime.getURL('themes/catpuccin.css');
             link.setAttribute('data-som-utils-theme', 'catppuccin');
             document.head.appendChild(link);
           }
@@ -190,7 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
         await applyCustomCSS(tab.id);
       }
 
-      await chrome.scripting.executeScript({
+      await api.scripting.executeScript({
         target: { tabId: tab.id },
         func: (theme, colors) => {
           localStorage.setItem('somTheme', theme);
@@ -219,18 +227,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function applyCustomCSS(tabId) {
     try {
-      const response = await fetch(chrome.runtime.getURL('themes/custom.css'));
+      const response = await fetch(api.runtime.getURL('themes/custom.css'));
       let cssContent = await response.text();
 
-      Object.keys(catppuccinColors).forEach(variable => {
-        const color = catppuccinColors[variable];
-        const regex = new RegExp(`--${variable}:\\s*#[a-f0-9]{6,8};`, 'gi');
-        cssContent = cssContent.replace(regex, `--${variable}: ${color};`);
-      });
+      if (catppuccinColors && typeof catppuccinColors === 'object') {
+        Object.keys(catppuccinColors).forEach(variable => {
+          const color = catppuccinColors[variable];
+          const regex = new RegExp(`--${variable}:\\s*#[a-f0-9]{6,8};`, 'gi');
+          cssContent = cssContent.replace(regex, `--${variable}: ${color};`);
+        });
+      }
 
       const wrappedCSS = `/* SOM Utils Custom Theme - DO NOT REMOVE */\n${cssContent}`;
       
-      await chrome.scripting.executeScript({
+      await api.scripting.executeScript({
         target: { tabId: tabId },
         func: (css) => {
           const style = document.createElement('style');
@@ -248,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function removeAllThemes(tabId) {
     try {
-      await chrome.scripting.executeScript({
+      await api.scripting.executeScript({
         target: { tabId: tabId },
         func: () => {
           const catppuccinLinks = document.querySelectorAll('link[href*="catpuccin.css"]');
