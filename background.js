@@ -1,3 +1,24 @@
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.url && tab.url.includes('summer.hackclub.com')) {
+    chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      func: () => {
+        const savedTheme = localStorage.getItem('somTheme');
+        const savedCustomColors = localStorage.getItem('somCustomColors');
+        
+        if (savedTheme) {
+          window.postMessage({
+            type: 'APPLYTHEME',
+            theme: savedTheme,
+            customColors: savedCustomColors ? JSON.parse(savedCustomColors) : null
+          }, '*');
+        }
+      }
+    }).catch(err => {
+    });
+  }
+});
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   if (request.action === 'fetchUserRank') {

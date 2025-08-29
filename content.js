@@ -3177,19 +3177,18 @@ function createAIAssistantModalContent() {
       max-height: 95vh;
     ">
       <div class="flex w-full">
-        <div>
-          <img class="-mr-[1px] max-w-none" src="https://summer.hackclub.com/assets/container/container-tl-588612b5.svg">
+        <div class="w-[46px] h-[53px]">
+          <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-tl-588612b5.svg">
         </div>
-        <img class="w-full h-[53px] -mr-[1px]" src="https://summer.hackclub.com/assets/container/container-tm-b678f005.svg">
-        <div>
-          <img class="max-w-none" src="https://summer.hackclub.com/assets/container/container-tr-0a17f012.svg">
+        <img class="w-full h-[53px]" src="https://summer.hackclub.com/assets/container/container-tm-b678f005.svg">
+        <div class="w-[36px] h-[53px]">
+          <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-tr-0a17f012.svg">
         </div>
       </div>
 
-      <div class="flex -mt-[1px] relative h-full">
-        <div class="w-[46px] h-full"></div>
-        <div class="ml-[1px] h-full absolute top-0 bottom-0">
-          <img class="w-[46px] h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-ml-61c63452.svg">
+      <div class="flex relative h-full">
+        <div class="w-[46px] h-full">
+          <img class="w-full h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-ml-61c63452.svg">
         </div>
 
         <div class="bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA] h-full w-full flex-1">
@@ -3276,19 +3275,18 @@ function createAIAssistantModalContent() {
           </div>
         </div>
 
-        <div class="w-[36px] h-full"></div>
-        <div class="h-full absolute top-0 bottom-0 right-0">
-          <img class="w-[36px] h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-mr-bf6da02e.svg">
+        <div class="w-[36px] h-full">
+          <img class="w-full h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-mr-bf6da02e.svg">
         </div>
       </div>
 
-      <div class="w-full flex ml-[1px]">
-        <div>
-          <img class="-mr-[1px] max-w-none" src="https://summer.hackclub.com/assets/container/container-bl-379861a1.svg">
+      <div class="w-full flex">
+        <div class="w-[46px] h-[53px]">
+          <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-bl-379861a1.svg">
         </div>
-        <img class="w-full h-[54px] -mr-[1px]" src="https://summer.hackclub.com/assets/container/container-bm-6ff3aaf2.svg">
-        <div>
-          <img class="max-w-none" src="https://summer.hackclub.com/assets/container/container-br-259cfcee.svg">
+        <img class="w-full h-[53px]" src="https://summer.hackclub.com/assets/container/container-bm-6ff3aaf2.svg">
+        <div class="w-[36px] h-[53px]">
+          <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-br-259cfcee.svg">
         </div>
       </div>
     </div>
@@ -4189,19 +4187,18 @@ function createGraphModal(ships, history) {
   modal.innerHTML = `
     <div class="som-graph-modal-content">
       <div class="flex w-full">
-        <div>
-          <img class="-mr-[1px] max-w-none" src="https://summer.hackclub.com/assets/container/container-tl-588612b5.svg">
+        <div class="w-[46px] h-[53px]">
+          <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-tl-588612b5.svg">
         </div>
-        <img class="w-full h-[53px] -mr-[1px]" src="https://summer.hackclub.com/assets/container/container-tm-b678f005.svg">
-        <div>
-          <img class="max-w-none" src="https://summer.hackclub.com/assets/container/container-tr-0a17f012.svg">
+        <img class="w-full h-[53px]" src="https://summer.hackclub.com/assets/container/container-tm-b678f005.svg">
+        <div class="w-[36px] h-[53px]">
+          <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-tr-0a17f012.svg">
         </div>
       </div>
 
-      <div class="flex -mt-[1px] relative h-full">
-        <div class="w-[46px] h-full"></div>
-        <div class="ml-[1px] h-full absolute top-0 bottom-0">
-          <img class="w-[46px] h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-ml-61c63452.svg">
+      <div class="flex relative h-full">
+        <div class="w-[46px] h-full">
+          <img class="w-full h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-ml-61c63452.svg">
         </div>
 
         <div class="bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA] h-full w-full flex-1">
@@ -4244,19 +4241,18 @@ function createGraphModal(ships, history) {
           </div>
         </div>
 
-        <div class="w-[36px] h-full"></div>
-        <div class="h-full absolute top-0 bottom-0 right-0">
-          <img class="w-[36px] h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-mr-bf6da02e.svg">
+        <div class="w-[36px] h-full">
+          <img class="w-full h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-mr-bf6da02e.svg">
         </div>
       </div>
 
-      <div class="w-full flex ml-[1px]">
-        <div>
-          <img class="-mr-[1px] max-w-none" src="https://summer.hackclub.com/assets/container/container-bl-379861a1.svg">
+      <div class="w-full flex">
+        <div class="w-[46px] h-[53px]">
+          <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-bl-379861a1.svg">
         </div>
-        <img class="w-full h-[54px] -mr-[1px]" src="https://summer.hackclub.com/assets/container/container-bm-6ff3aaf2.svg">
-        <div>
-          <img class="max-w-none" src="https://summer.hackclub.com/assets/container/container-br-259cfcee.svg">
+        <img class="w-full h-[53px]" src="https://summer.hackclub.com/assets/container/container-bm-6ff3aaf2.svg">
+        <div class="w-[36px] h-[53px]">
+          <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-br-259cfcee.svg">
         </div>
       </div>
     </div>
@@ -6839,6 +6835,97 @@ function processCurrentPage() {
 cleanupContaminatedData();
 
 document.addEventListener('DOMContentLoaded', processCurrentPage);
+
+window.addEventListener('message', async function(event) {
+  if (event.source !== window) {
+    return;
+  }
+
+  if (event.data.type && event.data.type === 'APPLYTHEME') {
+    applySavedTheme(event.data.theme, event.data.customColors);
+  }
+});
+async function applySavedTheme(theme, customColors) {
+  try {
+    await removeAllThemes();
+    
+    if (theme === 'catppuccin') {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = chrome.runtime.getURL('themes/catpuccin.css');
+      link.setAttribute('data-som-utils-theme', 'catppuccin');
+      document.head.appendChild(link);
+    } else if (theme === 'custom' && customColors) {
+      try {
+        const response = await fetch(chrome.runtime.getURL('themes/custom.css'));
+        let cssContent = await response.text();
+        Object.keys(customColors).forEach(variable => {
+          const color = customColors[variable];
+          cssContent = cssContent.replace(
+            new RegExp(`--${variable}: #[a-f0-9]{6};`, 'g'),
+            `--${variable}: ${color};`
+          );
+        });
+        
+        const style = document.createElement('style');
+        style.id = 'som-utils-custom-style';
+        style.setAttribute('data-som-utils-theme', 'custom');
+        style.textContent = cssContent;
+        document.head.appendChild(style);
+      } catch (error) {
+        console.error('SOM Utils: Error applying custom theme:', error);
+      }
+    }
+  } catch (error) {
+    console.error('SOM Utils: Error applying saved theme:', error);
+  }
+}
+
+async function removeAllThemes() {
+  try {
+    const catppuccinLinks = document.querySelectorAll('link[href*="catpuccin.css"]');
+    catppuccinLinks.forEach(link => link.remove());
+    
+    const themeLinks = document.querySelectorAll('link[href*="themes/"]');
+    themeLinks.forEach(link => link.remove());
+    
+    const markedLinks = document.querySelectorAll('link[data-som-utils-theme]');
+    markedLinks.forEach(link => link.remove());
+    
+    const customStyles = document.querySelectorAll('style[data-som-utils-theme]');
+    customStyles.forEach(style => style.remove());
+    
+    const allStyles = document.querySelectorAll('style');
+    allStyles.forEach(style => {
+      const textContent = style.textContent || '';
+      if (
+        textContent.includes('SOM Utils') ||
+        textContent.includes('SOM Utils Custom Theme') ||
+        textContent.includes('SOM Utils Theme')
+      ) {
+        style.remove();
+      }
+    });
+  } catch (e) {
+    console.error('SOM Utils: Error removing themes:', e);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const savedTheme = localStorage.getItem('somTheme');
+  if (savedTheme) {
+    const savedCustomColors = localStorage.getItem('somCustomColors');
+    let customColors = null;
+    if (savedCustomColors) {
+      try {
+        customColors = JSON.parse(savedCustomColors);
+      } catch (e) {
+        console.error('SOM Utils: Error parsing custom colors:', e);
+      }
+    }
+    applySavedTheme(savedTheme, customColors);
+  }
+});
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', processCurrentPage);

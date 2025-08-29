@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOM Utils</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <header class="popup-header">
+      <h1>SOM Utils</h1>
+    </header>
+
+    <div class="theme-section">
+      <h2>Theme</h2>
+      <div class="theme-grid">
+        <button class="theme-option active" data-theme="classic">
+          <div class="theme-preview">
+            <div class="color-swatch" style="background: #E6D4BE"></div>
+            <div class="color-swatch" style="background: #4A2D24"></div>
+            <div class="color-swatch" style="background: #E65A42"></div>
+          </div>
+          <span class="theme-name">Classic</span>
+        </button>
+        
+        <button class="theme-option" data-theme="catppuccin">
+          <div class="theme-preview">
+            <div class="color-swatch" style="background: #1e1e2e"></div>
+            <div class="color-swatch" style="background: #cba6f7"></div>
+            <div class="color-swatch" style="background: #89b4fa"></div>
+          </div>
+          <span class="theme-name">Catppuccin</span>
+        </button>
+        
+        <button class="theme-option" data-theme="custom">
+          <div class="theme-preview">
+            <div class="color-swatch custom-bg"></div>
+            <div class="color-swatch custom-accent"></div>
+            <div class="color-swatch custom-text"></div>
+          </div>
+          <span class="theme-name">Custom</span>
+        </button>
+      </div>
+    </div>
+
+    
+    <div id="custom-builder" class="custom-builder hidden">
+      <h3>Custom Theme</h3>
+      
+      <div class="color-section main-colors">
+        <h4>Main Colors</h4>
+        <div class="color-inputs">
+          <div class="color-input-row">
+            <label>Background:</label>
+            <input type="color" id="neutral-50" value="#1e1e2e">
+          </div>
+          <div class="color-input-row">
+            <label>Surface:</label>
+            <input type="color" id="neutral-300" value="#313244">
+          </div>
+          <div class="color-input-row">
+            <label>Accent:</label>
+            <input type="color" id="secondary-300" value="#8aadf4">
+          </div>
+          <div class="color-input-row">
+            <label>Primary Text:</label>
+            <input type="color" id="neutral-900" value="#cdd6f4">
+          </div>
+          <div class="color-input-row">
+            <label>Secondary Text:</label>
+            <input type="color" id="neutral-800" value="#9399b2">
+          </div>
+          <div class="color-input-row">
+            <label>Muted Text:</label>
+            <input type="color" id="neutral-600" value="#6c7086">
+          </div>
+        </div>
+      </div>
+
+      <div class="color-sections advanced-colors">
+        <h4>All Color Variables</h4>
+        
+        <div class="color-section">
+          <h5>Primary Colors</h5>
+          <div class="color-inputs">
+            <div class="color-input-row">
+              <label>Primary 50:</label>
+              <input type="color" id="primary-50" value="#f5e0dc">
+            </div>
+            <div class="color-input-row">
+              <label>Primary 100:</label>
+              <input type="color" id="primary-100" value="#f2cdcd">
+            </div>
+            <div class="color-input-row">
+              <label>Primary 200:</label>
+              <input type="color" id="primary-200" value="#f5c2e7">
+            </div>
+            <div class="color-input-row">
+              <label>Primary 300:</label>
+              <input type="color" id="primary-300" value="#cba6f7">
+            </div>
+            <div class="color-input-row">
+              <label>Primary 400:</label>
+              <input type="color" id="primary-400" value="#f38ba8">
+            </div>
+            <div class="color-input-row">
+              <label>Primary 500:</label>
+              <input type="color" id="primary-500" value="#eba0ac">
+            </div>
+            <div class="color-input-row">
+              <label>Primary 600:</label>
+              <input type="color" id="primary-600" value="#fab387">
+            </div>
+            <div class="color-input-row">
+              <label>Primary 700:</label>
+              <input type="color" id="primary-700" value="#f9e2af">
+            </div>
+            <div class="color-input-row">
+              <label>Primary 800:</label>
+              <input type="color" id="primary-800" value="#a6e3a1">
+            </div>
+            <div class="color-input-row">
+              <label>Primary 900:</label>
+              <input type="color" id="primary-900" value="#94e2d5">
+            </div>
+          </div>
+        </div>
+
+        <div class="color-section">
+          <h5>Secondary Colors</h5>
+          <div class="color-inputs">
+            <div class="color-input-row">
+              <label>Secondary 50:</label>
+              <input type="color" id="secondary-50" value="#89dceb">
+            </div>
+            <div class="color-input-row">
+              <label>Secondary 100:</label>
+              <input type="color" id="secondary-100" value="#74c7ec">
+            </div>
+            <div class="color-input-row">
+              <label>Secondary 200:</label>
+              <input type="color" id="secondary-200" value="#89b4fa">
+            </div>
+            <div class="color-input-row">
+              <label>Secondary 400:</label>
+              <input type="color" id="secondary-400" value="#b4befe">
+            </div>
+            <div class="color-input-row">
+              <label>Secondary 500:</label>
+              <input type="color" id="secondary-500" value="#cba6f7">
+            </div>
+            <div class="color-input-row">
+              <label>Secondary 600:</label>
+              <input type="color" id="secondary-600" value="#7f849c">
+            </div>
+            <div class="color-input-row">
+              <label>Secondary 700:</label>
+              <input type="color" id="secondary-700" value="#6c7086">
+            </div>
+            <div class="color-input-row">
+              <label>Secondary 800:</label>
+              <input type="color" id="secondary-800" value="#585b70">
+            </div>
+            <div class="color-input-row">
+              <label>Secondary 900:</label>
+              <input type="color" id="secondary-900" value="#45475a">
+            </div>
+          </div>
+        </div>
+
+        <div class="color-section">
+          <h5>Neutral Colors</h5>
+          <div class="color-inputs">
+            <div class="color-input-row">
+              <label>Neutral 100:</label>
+              <input type="color" id="neutral-100" value="#181825">
+            </div>
+            <div class="color-input-row">
+              <label>Neutral 200:</label>
+              <input type="color" id="neutral-200" value="#11111b">
+            </div>
+            <div class="color-input-row">
+              <label>Neutral 400:</label>
+              <input type="color" id="neutral-400" value="#45475a">
+            </div>
+            <div class="color-input-row">
+              <label>Neutral 500:</label>
+              <input type="color" id="neutral-500" value="#585b70">
+            </div>
+            <div class="color-input-row">
+              <label>Neutral 700:</label>
+              <input type="color" id="neutral-700" value="#7f849c">
+            </div>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+
+    <div id="status" class="status hidden">
+      <span id="status-text"></span>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

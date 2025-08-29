@@ -6,6 +6,7 @@
   "permissions": [
     "activeTab",
     "scripting",
+    "storage",
     "https://summer.hackclub.com/*",
     "https://lb.summer.hackclub.com/*",
     "https://explorpheus.hackclub.com/*",
@@ -19,12 +20,23 @@
     {
       "matches": ["https://summer.hackclub.com/*"],
       "js": ["chart.min.js", "chartjs-adapter-date-fns.bundle.min.js", "ai-detector.js", "content.js"],
-      "css": ["styles.css"]
+      "css": ["styles.css"],
+      "run_at": "document_start"
     }
   ],
   "icons": {
     "16": "icon16.png",
     "48": "icon48.png",
     "128": "icon128.png"
-  }
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "SOM Utils"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["themes/*"],
+      "matches": ["https://summer.hackclub.com/*"]
+    }
+  ]
 }
