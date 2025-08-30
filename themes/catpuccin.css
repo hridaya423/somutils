@@ -295,6 +295,34 @@
         color: var(--color-accent) !important;
     }
 
+    .som-streaming-bubble {
+        background: var(--color-surface) !important;
+        border: 1px solid var(--color-accent) !important;
+        color: var(--color-text-primary) !important;
+        padding: 12px 16px !important;
+        border-radius: 18px 18px 18px 4px !important;
+        margin: 8px 0 !important;
+        max-width: 80% !important;
+    }
+
+    .som-ai-streaming {
+        color: var(--color-text-primary) !important;
+    }
+
+    .som-streaming-text {
+        color: var(--color-text-primary) !important;
+    }
+
+    .som-text-paragraph {
+        color: var(--color-text-primary) !important;
+        margin: 0 !important;
+    }
+
+    .som-streaming-bubble strong {
+        color: var(--color-accent) !important;
+        font-weight: 600 !important;
+    }
+
     .som-ai-input {
         color: var(--color-text-primary) !important;
         background: var(--color-background) !important;
