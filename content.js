@@ -3171,6 +3171,9 @@ function createAIAssistantModal() {
 }
 
 function createAIAssistantModalContent() {
+  const savedTheme = localStorage.getItem('somTheme');
+  const showBorders = savedTheme === 'classic' || !savedTheme;
+  
   return `
     <div class="som-graph-modal-content" style="
       width: 1040px;
@@ -3178,6 +3181,7 @@ function createAIAssistantModalContent() {
       height: 680px;
       max-height: 95vh;
     ">
+      ${showBorders ? `
       <div class="flex w-full">
         <div class="w-[46px] h-[53px]">
           <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-tl-588612b5.svg">
@@ -3187,11 +3191,14 @@ function createAIAssistantModalContent() {
           <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-tr-0a17f012.svg">
         </div>
       </div>
+      ` : ''}
 
       <div class="flex relative h-full">
+        ${showBorders ? `
         <div class="w-[46px] h-full">
           <img class="w-full h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-ml-61c63452.svg">
         </div>
+        ` : ''}
 
         <div class="bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA] h-full w-full flex-1">
           <div class="som-modal-inner som-modal-container">
@@ -3277,11 +3284,14 @@ function createAIAssistantModalContent() {
           </div>
         </div>
 
+        ${showBorders ? `
         <div class="w-[36px] h-full">
           <img class="w-full h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-mr-bf6da02e.svg">
         </div>
+        ` : ''}
       </div>
 
+      ${showBorders ? `
       <div class="w-full flex">
         <div class="w-[46px] h-[53px]">
           <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-bl-379861a1.svg">
@@ -3291,6 +3301,7 @@ function createAIAssistantModalContent() {
           <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-br-259cfcee.svg">
         </div>
       </div>
+      ` : ''}
     </div>
   `;
 }
@@ -4184,10 +4195,15 @@ function createGraphModal(ships, history) {
     existingModal.remove();
   }
   
+  // Only show border images for classic theme
+  const savedTheme = localStorage.getItem('somTheme');
+  const showBorders = savedTheme === 'classic' || !savedTheme; // Default to showing borders if no theme is set
+  
   const modal = document.createElement('div');
   modal.className = 'som-graph-modal';
   modal.innerHTML = `
     <div class="som-graph-modal-content">
+      ${showBorders ? `
       <div class="flex w-full">
         <div class="w-[46px] h-[53px]">
           <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-tl-588612b5.svg">
@@ -4197,11 +4213,14 @@ function createGraphModal(ships, history) {
           <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-tr-0a17f012.svg">
         </div>
       </div>
+      ` : ''}
 
       <div class="flex relative h-full">
+        ${showBorders ? `
         <div class="w-[46px] h-full">
           <img class="w-full h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-ml-61c63452.svg">
         </div>
+        ` : ''}
 
         <div class="bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA] h-full w-full flex-1">
           <div class="som-modal-inner">
@@ -4243,11 +4262,14 @@ function createGraphModal(ships, history) {
           </div>
         </div>
 
+        ${showBorders ? `
         <div class="w-[36px] h-full">
           <img class="w-full h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-mr-bf6da02e.svg">
         </div>
+        ` : ''}
       </div>
 
+      ${showBorders ? `
       <div class="w-full flex">
         <div class="w-[46px] h-[53px]">
           <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-bl-379861a1.svg">
@@ -4257,6 +4279,7 @@ function createGraphModal(ships, history) {
           <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-br-259cfcee.svg">
         </div>
       </div>
+      ` : ''}
     </div>
   `;
   
