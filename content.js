@@ -5776,11 +5776,54 @@ function processShopPage() {
 
 function processBlackMarketPage() {
   const shopItems = document.querySelectorAll('.shop-item-row');
-  
+
+  try {
+    sortBlackMarketItemsByPrice(shopItems);
+  } catch (e) {
+    console.warn('SOM Utils: Failed to sort black market items:', e);
+  }
+
   shopItems.forEach(item => {
     updateBlackMarketTimeEstimate(item);
     addBlackMarketGoalButton(item);
   });
+}
+
+function sortBlackMarketItemsByPrice(nodeList) {
+  if (!nodeList || nodeList.length === 0) return;
+
+  const items = Array.from(nodeList);
+  const container = items[0].parentElement;
+  if (!container || container.getAttribute('data-som-bm-sorted') === 'true') return;
+
+  const getPrice = (row) => {
+    const dataPrice = row.getAttribute('data-item-price') || row.dataset?.itemPrice;
+    if (dataPrice && !isNaN(parseFloat(dataPrice))) return parseFloat(dataPrice);
+
+    try {
+      const data = extractBlackMarketItemData(row);
+      if (data && data.shellCost && !isNaN(data.shellCost)) return data.shellCost;
+    } catch (e) {}
+
+    const btn = row.querySelector('.shop-item-actions button');
+    if (btn) {
+      const txt = btn.textContent || '';
+      let m = txt.match(/Buy for\s*([\d,]+)/i);
+      if (m) return parseInt(m[1].replace(/,/g, ''), 10);
+      m = txt.match(/([\d,]+)\s*needed/i);
+      if (m) {
+        const needed = parseInt(m[1].replace(/,/g, ''), 10);
+        const current = getCurrentUserShells?.() || 0;
+        return needed + current;
+      }
+    }
+    return Number.POSITIVE_INFINITY;
+  };
+
+  items.sort((a, b) => getPrice(a) - getPrice(b));
+
+  items.forEach(el => container.appendChild(el));
+  container.setAttribute('data-som-bm-sorted', 'true');
 }
 
 function addFilePasteSupport() {
