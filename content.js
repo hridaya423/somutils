@@ -3183,20 +3183,21 @@ function createAIAssistantModalContent() {
     ">
       ${showBorders ? `
       <div class="flex w-full">
-        <div class="w-[46px] h-[53px]">
-          <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-tl-588612b5.svg">
+        <div>
+          <img class="-mr-[1px] max-w-none" src="https://summer.hackclub.com/assets/container/container-tl-588612b5.svg">
         </div>
-        <img class="w-full h-[53px]" src="https://summer.hackclub.com/assets/container/container-tm-b678f005.svg">
-        <div class="w-[36px] h-[53px]">
-          <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-tr-0a17f012.svg">
+        <img class="w-full h-[53px] -mr-[1px]" src="https://summer.hackclub.com/assets/container/container-tm-b678f005.svg">
+        <div>
+          <img class="max-w-none" src="https://summer.hackclub.com/assets/container/container-tr-0a17f012.svg">
         </div>
       </div>
       ` : ''}
 
-      <div class="flex relative h-full">
+      <div class="flex -mt-[1px] relative h-full">
         ${showBorders ? `
-        <div class="w-[46px] h-full">
-          <img class="w-full h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-ml-61c63452.svg">
+        <div class="w-[46px] h-full"></div>
+        <div class="ml-[1px] h-full absolute top-0 bottom-0">
+          <img class="w-[46px] h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-ml-61c63452.svg">
         </div>
         ` : ''}
 
@@ -3285,20 +3286,21 @@ function createAIAssistantModalContent() {
         </div>
 
         ${showBorders ? `
-        <div class="w-[36px] h-full">
-          <img class="w-full h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-mr-bf6da02e.svg">
+        <div class="w-[36px] h-full"></div>
+        <div class="h-full absolute top-0 bottom-0 right-0">
+          <img class="w-[36px] h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-mr-bf6da02e.svg">
         </div>
         ` : ''}
       </div>
 
       ${showBorders ? `
-      <div class="w-full flex">
-        <div class="w-[46px] h-[53px]">
-          <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-bl-379861a1.svg">
+      <div class="w-full flex ml-[1px]">
+        <div>
+          <img class="-mr-[1px] max-w-none" src="https://summer.hackclub.com/assets/container/container-bl-379861a1.svg">
         </div>
-        <img class="w-full h-[53px]" src="https://summer.hackclub.com/assets/container/container-bm-6ff3aaf2.svg">
-        <div class="w-[36px] h-[53px]">
-          <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-br-259cfcee.svg">
+        <img class="w-full h-[54px] -mr-[1px]" src="https://summer.hackclub.com/assets/container/container-bm-6ff3aaf2.svg">
+        <div>
+          <img class="max-w-none" src="https://summer.hackclub.com/assets/container/container-br-259cfcee.svg">
         </div>
       </div>
       ` : ''}
@@ -4197,28 +4199,34 @@ function createGraphModal(ships, history) {
   
   // Only show border images for classic theme
   const savedTheme = localStorage.getItem('somTheme');
-  const showBorders = savedTheme === 'classic' || !savedTheme; // Default to showing borders if no theme is set
+  const showBorders = savedTheme === 'classic' || !savedTheme;
   
   const modal = document.createElement('div');
   modal.className = 'som-graph-modal';
   modal.innerHTML = `
-    <div class="som-graph-modal-content">
+    <div class="som-graph-modal-content" style="
+      width: 1040px;
+      max-width: 98vw;
+      height: 680px;
+      max-height: 95vh;
+    ">
       ${showBorders ? `
       <div class="flex w-full">
-        <div class="w-[46px] h-[53px]">
-          <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-tl-588612b5.svg">
+        <div>
+          <img class="-mr-[1px] max-w-none" src="https://summer.hackclub.com/assets/container/container-tl-588612b5.svg">
         </div>
-        <img class="w-full h-[53px]" src="https://summer.hackclub.com/assets/container/container-tm-b678f005.svg">
-        <div class="w-[36px] h-[53px]">
-          <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-tr-0a17f012.svg">
+        <img class="w-full h-[53px] -mr-[1px]" src="https://summer.hackclub.com/assets/container/container-tm-b678f005.svg">
+        <div>
+          <img class="max-w-none" src="https://summer.hackclub.com/assets/container/container-tr-0a17f012.svg">
         </div>
       </div>
       ` : ''}
 
-      <div class="flex relative h-full">
+      <div class="flex -mt-[1px] relative h-full">
         ${showBorders ? `
-        <div class="w-[46px] h-full">
-          <img class="w-full h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-ml-61c63452.svg">
+        <div class="w-[46px] h-full"></div>
+        <div class="ml-[1px] h-full absolute top-0 bottom-0">
+          <img class="w-[46px] h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-ml-61c63452.svg">
         </div>
         ` : ''}
 
@@ -4263,20 +4271,21 @@ function createGraphModal(ships, history) {
         </div>
 
         ${showBorders ? `
-        <div class="w-[36px] h-full">
-          <img class="w-full h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-mr-bf6da02e.svg">
+        <div class="w-[36px] h-full"></div>
+        <div class="h-full absolute top-0 bottom-0 right-0">
+          <img class="w-[36px] h-full bg-linear-to-b from-[#E6D4BE] to-[#F6DBBA]" src="https://summer.hackclub.com/assets/container/container-mr-bf6da02e.svg">
         </div>
         ` : ''}
       </div>
 
       ${showBorders ? `
-      <div class="w-full flex">
-        <div class="w-[46px] h-[53px]">
-          <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-bl-379861a1.svg">
+      <div class="w-full flex ml-[1px]">
+        <div>
+          <img class="-mr-[1px] max-w-none" src="https://summer.hackclub.com/assets/container/container-bl-379861a1.svg">
         </div>
-        <img class="w-full h-[53px]" src="https://summer.hackclub.com/assets/container/container-bm-6ff3aaf2.svg">
-        <div class="w-[36px] h-[53px]">
-          <img class="w-full h-full" src="https://summer.hackclub.com/assets/container/container-br-259cfcee.svg">
+        <img class="w-full h-[54px] -mr-[1px]" src="https://summer.hackclub.com/assets/container/container-bm-6ff3aaf2.svg">
+        <div>
+          <img class="max-w-none" src="https://summer.hackclub.com/assets/container/container-br-259cfcee.svg">
         </div>
       </div>
       ` : ''}
