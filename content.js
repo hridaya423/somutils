@@ -3771,6 +3771,7 @@ Projects CANNOT be:
 - All pending payouts will be paid out before SoM ends
 - Make sure to spend your shells before the shop closes (Hack Club won't transfer currency!)
 - The Balloon Brigade: Starting right now, all new devlog and shipped project authors will be mailed real balloons to help pull the "sinking" island up!
+- THE BALLOON BRIGADE IS NOW COMPLETE. THE EVENT RUNS TILL SEPTEMBER 30TH
 
 ### Project Certification:
 - Manual review of all projects to help ensure fraud doesn't occur
