@@ -3742,7 +3742,7 @@ Projects CANNOT be:
 
 ### Demo Link Requirements by Project Type:
 - **Hardware projects**: You can use a video demo of a project you've built IRL (or a demo of the PCB/CAD/firmware if you haven't)
-- **Websites** (and anything on a server): You need to host it and make it available to everyone. Try Nest server for any project or GitHub Pages for static sites (both are free!)
+- **Websites** (and anything on a server): You need to host it and make it available to everyone. Try Nest server (a free Linux server from Hack Club, https://hackclub.app/) for any project or GitHub Pages for static sites (both are free!)
 - **Downloadable/native/CLI software**: Compile/package it to an executable (like PyInstaller for Python) and post it with something like releases on GitHub, or publish it on an appropriate package registry (like PyPI and npm)
 
 ### Devlog System:
