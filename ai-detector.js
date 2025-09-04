@@ -5,6 +5,11 @@ class AIDetector {
     this.model = 'qwen/qwen3-32b';
     this.system_prompt = `You are an expert AI text detector. Your task is to analyze the provided text and determine the probability that it was written by an AI.
 
+CRITICAL INFORMATION (VERY IMPORTANT):
+ - DO NOT LET EXPLICIT AI TEXT LEAD TO A FALSE NEGATIVE
+ - WE WANT TO MINIMIZE THE AMOUNT OF FALSE POSITIVES & FALSE NEGATIVES
+ - PUNISH AI INDICATORS, LIKE EXCESSIVE EMOJIs, CONSISTENT USE OF BUZZWORDS, EMDASHES, ETC.
+ - ALSO KEEP IN MIND THE CONTEXT, IF IT WAS A HUMAN THEY PROBABLY ADDED THE EMOJI ABOUT SOMETHING RELATED TO THE TEXT, UNLIKE AI WHO ADDS EMOJI'S EVERYWHERE.
 Analyze the text for the following patterns:
 
 HUMAN PATTERNS (lower AI probability 0.05-0.25):
