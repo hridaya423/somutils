@@ -1945,7 +1945,7 @@ async function getCampfireStats() {
     let netWorth = currentShells + totalSpent;
     let spentShells = totalSpent;
     const goalProgress = calculateGoalProgress(true);
-    const efficiency = getUserAverageEfficiency() || 0;
+    const efficiency = getUserAverageEfficiency() || 10;
     const devlogData = getTotalDevlogsData();
     const totalDevlogs = devlogData.totalDevlogs;
     
