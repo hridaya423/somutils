@@ -2221,10 +2221,18 @@ async function processCampfirePage() {
       
       hackatimeSection.parentNode.insertBefore(statsContainer, hackatimeSection);
       hackatimeSection.style.display = 'none';
-      const todoListSection = document.querySelector('.mb-8 .card-with-gradient[data-controller="card"]');
-      if (todoListSection && todoListSection.textContent.includes('Todo list:')) {
-        todoListSection.closest('.mb-8').style.display = 'none';
+      
+      const finalAdventureSection = document.querySelector('section.definition-paper.definition-mood-mysterious');
+      if (finalAdventureSection && finalAdventureSection.textContent.includes('FINAL ADVENTURE')) {
+        finalAdventureSection.closest('.mb-8').style.display = 'none';
       }
+      
+      const todoListSections = document.querySelectorAll('.mb-8');
+      todoListSections.forEach(section => {
+        if (section.textContent.includes('Todo list:')) {
+          section.style.display = 'none';
+        }
+      });
     } else {
       const headerSection = document.querySelector('h1');
       if (headerSection && headerSection.textContent.includes('Campfire')) {
@@ -2242,6 +2250,18 @@ async function processCampfirePage() {
               parentContainer.appendChild(statsContainer);
             }
           }
+          
+          const finalAdventureSection = document.querySelector('section.definition-paper.definition-mood-mysterious');
+          if (finalAdventureSection && finalAdventureSection.textContent.includes('FINAL ADVENTURE')) {
+            finalAdventureSection.closest('.mb-8').style.display = 'none';
+          }
+          
+          const todoListSections = document.querySelectorAll('.mb-8');
+          todoListSections.forEach(section => {
+            if (section.textContent.includes('Todo list:')) {
+              section.style.display = 'none';
+            }
+          });
           
           const onboardingSection = document.querySelector('h2');
           if (onboardingSection && onboardingSection.textContent.includes('Set up your account!')) {
