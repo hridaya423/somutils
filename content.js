@@ -2732,7 +2732,11 @@ function addProjectSortInterface(projectCards, projectData) {
 
 function extractAllShipsData() {
   const ships = [];
-  const shipCards = document.querySelectorAll('.card-with-gradient');
+  let shipCards = document.querySelectorAll('.card-with-gradient');
+  
+  if (shipCards.length === 0) {
+    shipCards = document.querySelectorAll('.rounded-md.border-2.flex.flex-col[data-padding]');
+  }
   
   shipCards.forEach((shipCard, domIndex) => {
     const shipData = extractIndividualShipData(shipCard, domIndex);
@@ -2851,9 +2855,7 @@ function addProjectBannerBadge() {
 }
 
 function enhanceProjectStats() {
-  const statsContainer = document.querySelector('.flex.gap-3.flex-wrap.items-center.space-x-2.mb-1');
-  if (!statsContainer) return;
-  
+  let statsContainer = document.querySelector('.flex.gap-3.flex-wrap.items-center.space-x-2.mb-1');
   if (statsContainer.parentNode.querySelector('.som-enhanced-stats-container')) return;
   
   try {
@@ -2967,7 +2969,11 @@ function processProjectPage() {
 }
 
 function addDatatoShipCards(ships) {
-  const shipCards = document.querySelectorAll('.card-with-gradient:not(.som-enhanced)');
+  let shipCards = document.querySelectorAll('.card-with-gradient:not(.som-enhanced)');
+  
+  if (shipCards.length === 0) {
+    shipCards = document.querySelectorAll('.rounded-md.border-2.flex.flex-col[data-padding]:not(.som-enhanced)');
+  }
   const shipDataMap = new Map();
   ships.forEach(ship => {
     shipDataMap.set(ship.domIndex, ship);
