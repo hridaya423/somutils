@@ -359,7 +359,7 @@ async function fetchHackatimeStats(slackId) {
   }
   
   try {
-    const response = await fetch(`httpshackatime.hackclub.com/api/v1/users/${encodeURIComponent(slackId)}/stats?features=projects`);
+    const response = await fetch(`https://hackatime.hackclub.com/api/v1/users/${encodeURIComponent(slackId)}/stats?features=projects`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
