@@ -2,6 +2,15 @@ const api = typeof browser !== 'undefined' ? browser : chrome;
 
 window.somUtilsProjectionMode = true;
 
+function formatNumber(num) {
+  if (num === null || num === undefined) return '0';
+  const number = Number(num);
+  if (isNaN(number)) return '0';
+  if (number >= 1000000) return (number / 1000000).toFixed(1) + 'M';
+  if (number >= 1000) return (number / 1000).toFixed(1) + 'K';
+  return number.toString();
+}
+
 class VoteEstimationService {
   static BASE_RATING = 1100;
   
@@ -1948,6 +1957,7 @@ async function getCampfireStats() {
     const efficiency = getUserAverageEfficiency() || 10;
     const devlogData = getTotalDevlogsData();
     const totalDevlogs = devlogData.totalDevlogs;
+    const shellsHistory = await getShellsHistoryData(username, avatarUrl);
     
     const stats = {
       currentShells: currentShells,
@@ -1960,6 +1970,7 @@ async function getCampfireStats() {
       totalOrders: netWorthData ? netWorthData.shopOrderCount : 0,
       efficiency: efficiency,
       leaderboardRank: rank,
+      shellsHistory: shellsHistory,
       goals: {
         count: goalsData.goals.length,
         totalCost: goalsData.totalShellsNeeded,
@@ -1975,6 +1986,328 @@ async function getCampfireStats() {
   } catch (error) {
     console.error('SOM Utils: Error getting campfire stats:', error);
     return null;
+  }
+}
+
+function createShellsProgressChart(shellsHistory, currentShells) {
+  const chartId = `shells-chart-${Date.now()}`;
+  
+  const totalEarned = shellsHistory
+    .filter(entry => entry.amount > 0)
+    .reduce((sum, entry) => sum + entry.amount, 0);
+  const shipTransactions = shellsHistory.filter(entry => entry.type === 'ShipEvent').length;
+  const avgPerShip = shipTransactions > 0 ? Math.round(totalEarned / shipTransactions) : 0;
+
+  setTimeout(() => {
+    createChartInstance(chartId, shellsHistory);
+  }, 100);
+  
+  const chartIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M16,6L18.29,8.29L13.41,13.17L9.41,9.17L2,16.59L3.41,18L9.41,12L13.41,16L19.71,9.71L22,12V6H16Z"/></svg>';
+  
+  return `
+    <div class="som-glass-stats-card" style="padding-top: 24px; padding-bottom: 24px;">
+      <div class="som-glass-glow" style="background: radial-gradient(circle, #8aadf4 0%, transparent 70%); opacity: 0.1;"></div>
+      <div class="som-glass-content">
+       
+        <div style="height: 200px; margin: 16px 0 20px 0; padding: 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);">
+          <canvas id="${chartId}" style="width: 100%; height: 100%;"></canvas>
+        </div>
+        
+        <div style="display: flex; justify-content: space-around; gap: 16px; margin-top: 16px;">
+          <div style="text-align: center;">
+            <div class="som-glass-stat-value">${formatNumber(totalEarned)}</div>
+            <div class="som-glass-stat-label">Total Earned</div>
+          </div>
+          <div style="text-align: center;">
+            <div class="som-glass-stat-value">${shipTransactions}</div>
+            <div class="som-glass-stat-label">Ships</div>
+          </div>
+          <div style="text-align: center;">
+            <div class="som-glass-stat-value">${avgPerShip}</div>
+            <div class="som-glass-stat-label">Avg/Ship</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function createChartInstance(chartId, shellsHistory) {
+  try {
+    if (!window.Chart) {
+      setTimeout(() => createChartInstance(chartId, shellsHistory), 100);
+      return;
+    }
+    
+    const ctx = document.getElementById(chartId);
+    if (!ctx) {
+      return;
+    }
+    
+    if (!shellsHistory || shellsHistory.length === 0) {
+      return;
+    }
+  
+    const coloredFillPlugin = {
+      id: 'coloredFill',
+      beforeDatasetDraw: function(chart, args) {
+        const { ctx, data } = chart;
+        const dataset = data.datasets[args.index];
+        const meta = chart.getDatasetMeta(args.index);
+        
+        if (!dataset.backgroundColor || !Array.isArray(dataset.backgroundColor)) {
+          return;
+        }
+        
+        const points = meta.data;
+        if (!points || points.length === 0) {
+          return;
+        }
+
+        const chartArea = chart.chartArea;
+        const { left, right, top, bottom } = chartArea;
+        
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(left, top, right - left, bottom - top);
+        ctx.clip();
+        
+        for (let i = 0; i < points.length - 1; i++) {
+          const currentPoint = points[i];
+          const nextPoint = points[i + 1];
+          
+          if (!currentPoint || !nextPoint) continue;
+          
+          const currentColor = dataset.backgroundColor[i];
+          const nextColor = dataset.backgroundColor[i + 1];
+          
+          const gradient = ctx.createLinearGradient(
+            currentPoint.x, 0, 
+            nextPoint.x, 0
+          );
+          gradient.addColorStop(0, currentColor);
+          gradient.addColorStop(1, nextColor);
+          
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.moveTo(currentPoint.x, bottom);
+          ctx.lineTo(currentPoint.x, currentPoint.y);
+          ctx.lineTo(nextPoint.x, nextPoint.y);
+          ctx.lineTo(nextPoint.x, bottom);
+          ctx.closePath();
+          ctx.fill();
+        }
+        
+        ctx.restore();
+      }
+    };
+    
+    const coloredLinePlugin = {
+      id: 'coloredLine',
+      beforeDatasetDraw: function(chart, args) {
+        const { ctx, data } = chart;
+        const dataset = data.datasets[args.index];
+        const meta = chart.getDatasetMeta(args.index);
+        
+        if (!lineColors || lineColors.length === 0) {
+          return;
+        }
+        
+        const points = meta.data;
+        if (!points || points.length === 0) {
+          return;
+        }
+        
+        ctx.save();
+        ctx.lineWidth = dataset.borderWidth || 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        for (let i = 0; i < points.length - 1; i++) {
+          const currentPoint = points[i];
+          const nextPoint = points[i + 1];
+          
+          if (!currentPoint || !nextPoint) continue;
+          
+          const currentColor = lineColors[i];
+          const nextColor = lineColors[i + 1];
+          
+          const gradient = ctx.createLinearGradient(
+            currentPoint.x, currentPoint.y,
+            nextPoint.x, nextPoint.y
+          );
+          
+          gradient.addColorStop(0, currentColor);
+          gradient.addColorStop(1, nextColor);
+          
+          ctx.strokeStyle = gradient;
+          ctx.beginPath();
+          ctx.moveTo(currentPoint.x, currentPoint.y);
+          ctx.lineTo(nextPoint.x, nextPoint.y);
+          ctx.stroke();
+        }
+        
+        ctx.restore();
+      }
+    };
+    
+    const trophyIconPlugin = {
+      id: 'trophyIcon',
+      afterDatasetDraw: function(chart, args) {
+        const { ctx } = chart;
+        const meta = chart.getDatasetMeta(args.index);
+        const points = meta.data;
+        
+        if (!points || points.length === 0) {
+          return;
+        }
+        
+        ctx.save();
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        points.forEach((point, i) => {
+          const dataPoint = shellsHistory[i];
+          if (dataPoint && dataPoint.shells === maxShells) {
+            ctx.fillStyle = '#fbbf24';
+            ctx.fillText('🏆', point.x, point.y - 20);
+          }
+        });
+        
+        ctx.restore();
+      }
+    };
+    
+    Chart.register(coloredFillPlugin, coloredLinePlugin, trophyIconPlugin);
+
+    const maxShells = Math.max(...shellsHistory.map(entry => entry.shells));
+    const fillColors = shellsHistory.map((entry) => {
+      if (entry.amount > 0) return 'rgba(34, 197, 94, 0.2)';
+      if (entry.amount < 0) return 'rgba(239, 68, 68, 0.2)';
+      return 'rgba(138, 173, 244, 0.15)';
+    });
+
+    const lineColors = shellsHistory.map((entry) => {
+      if (entry.amount > 0) return 'rgba(34, 197, 94, 0.6)';
+      if (entry.amount < 0) return 'rgba(239, 68, 68, 0.6)';
+      return 'rgba(138, 173, 244, 0.5)';
+    });
+    
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: shellsHistory.map(entry => new Date(entry.timestamp).toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric' 
+        })),
+        datasets: [{
+          label: 'Shells',
+          data: shellsHistory.map(entry => entry.shells),
+          backgroundColor: fillColors,
+          borderColor: 'transparent',
+          borderWidth: 2.5,
+          fill: false,
+          tension: 0.4,
+          pointRadius: 0,
+          pointHoverRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          intersect: false,
+          mode: 'index'
+        },
+        plugins: {
+          coloredFill: {
+            enabled: true
+          },
+          coloredLine: {
+            enabled: true
+          },
+          trophyIcon: {
+            enabled: true
+          },
+          legend: {
+            display: false
+          },
+          tooltip: {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            borderColor: 'rgba(138, 173, 244, 0.3)',
+            borderWidth: 1,
+            cornerRadius: 8,
+            displayColors: false,
+            callbacks: {
+              title: function(context) {
+                const dataIndex = context[0].dataIndex;
+                return new Date(shellsHistory[dataIndex].timestamp).toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                });
+              },
+              label: function(context) {
+                const dataPoint = shellsHistory[context.dataIndex];
+                const changeText = dataPoint.amount >= 0 ? `+${dataPoint.amount}` : `${dataPoint.amount}`;
+                const isPeak = dataPoint.shells === maxShells;
+                const emoji = dataPoint.amount > 0 ? '📈' : dataPoint.amount < 0 ? '📉' : '➡️';
+                
+                const lines = [
+                  `${context.parsed.y} shells total`
+                ];
+                
+                if (isPeak) {
+                  lines.push('🏆 ALL-TIME PEAK!');
+                }
+                
+                lines.push(`${emoji} ${changeText} (${dataPoint.type})`);
+                
+                return lines;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            display: true,
+            grid: {
+              display: false
+            },
+            ticks: {
+              color: '#4a5568',
+              font: {
+                size: 11
+              },
+              maxTicksLimit: 8
+            }
+          },
+          y: {
+            display: true,
+            grid: {
+              color: 'rgba(0, 0, 0, 0.1)',
+              drawBorder: false
+            },
+            ticks: {
+              color: '#4a5568',
+              font: {
+                size: 11
+              },
+              callback: function(value) {
+                return formatNumber(value);
+              }
+            }
+          }
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('SOM Utils: Error creating shells chart:', error);
   }
 }
 
@@ -2041,7 +2374,15 @@ function createCampfireStatsSection(stats) {
       
       ${stats.goals.count > 0 ? createGoalsProgressSection(stats) : ''}
       
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      ${(() => {
+        if (stats.shellsHistory && stats.shellsHistory.length >= 1) {
+          return createShellsProgressChart(stats.shellsHistory, stats.currentShells);
+        } else {
+          return '';
+        }
+      })()}
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
         ${createStatsCard(
           'Current Shells', 
           formatNumber(stats.currentShells), 
@@ -2549,6 +2890,30 @@ function getTotalDevlogsData() {
   } catch (error) {
     console.error('SOM Utils: Error parsing total devlogs data:', error);
     return { totalDevlogs: 0, timestamp: 0, lastUpdated: null };
+  }
+}
+
+async function getShellsHistoryData(username, avatarUrl) {
+  try {
+
+    if (!username) {
+      return [];
+    }
+    
+    const response = await api.runtime.sendMessage({
+      action: 'fetchShellsHistory',
+      username: username,
+      avatarUrl: avatarUrl
+    });
+    
+    if (response && response.success && response.data && response.data.shellHistory) {
+      const shellHistory = response.data.shellHistory.slice(-30);
+      return shellHistory;
+    } else {
+      return [];
+    }
+  } catch (error) {
+    return [];
   }
 }
 

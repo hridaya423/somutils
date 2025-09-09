@@ -51,6 +51,18 @@ api.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
   
+  if (request.action === 'fetchShellsHistory') {
+    fetchShellsHistory(request.username, request.avatarUrl)
+      .then(data => {
+        sendResponse({ success: true, data: data });
+      })
+      .catch(error => {
+        console.error('SOM Utils Background: Error fetching shells history:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true;
+  }
+  
   if (request.action === 'fetchEconomyData') {
     fetchEconomyData()
       .then(data => {
@@ -162,6 +174,68 @@ async function fetchUserRank(username, avatarUrl = null) {
     throw new Error('User not found in leaderboard');
   } catch (error) {
     console.error('Fetch error:', error);
+    throw error;
+  }
+}
+
+async function fetchShellsHistory(username, avatarUrl = null) {
+
+  if (!username) {
+    throw new Error('Username is required');
+  }
+  
+  try {
+    const response = await fetch(`https://lb.summer.hackclub.com/api/search?search=${encodeURIComponent(username)}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+
+    if (!data.users || !Array.isArray(data.users) || data.users.length === 0) {
+      throw new Error('User not found in leaderboard');
+    }
+    
+    const user = findUserByAvatarAndName(data.users, username, avatarUrl);
+    if (!user) {
+      throw new Error('User not found in leaderboard');
+    }
+    
+    const shellHistory = [];
+    let cumulativeShells = 0;
+    
+    if (user.payouts && Array.isArray(user.payouts)) {
+      const payoutTypes = user.payouts.map(p => p.type);
+      const typeCount = payoutTypes.reduce((acc, type) => {
+        acc[type] = (acc[type] || 0) + 1;
+        return acc;
+      }, {});
+      
+      const sortedPayouts = user.payouts
+        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      
+
+      sortedPayouts.forEach(payout => {
+        const amount = parseFloat(payout.amount) || 0;
+        cumulativeShells += amount;
+        shellHistory.push({
+          timestamp: new Date(payout.created_at).getTime(),
+          date: new Date(payout.created_at),
+          shells: cumulativeShells,
+          amount: amount,
+          type: payout.type
+        });
+      });
+    }
+    
+    return {
+      shellHistory: shellHistory,
+      totalShells: cumulativeShells,
+      totalEarned: cumulativeShells
+    };
+    
+  } catch (error) {
+    console.error('Shells history fetch error:', error);
     throw error;
   }
 }
@@ -285,7 +359,7 @@ async function fetchHackatimeStats(slackId) {
   }
   
   try {
-    const response = await fetch(`https://hackatime.hackclub.com/api/v1/users/${encodeURIComponent(slackId)}/stats?features=projects`);
+    const response = await fetch(`httpshackatime.hackclub.com/api/v1/users/${encodeURIComponent(slackId)}/stats?features=projects`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
