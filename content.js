@@ -6132,26 +6132,33 @@ function addGoalsProgressHeader() {
     return;
   }
   
-  const featuredGrid = document.querySelector('.coolshits-grid');
-  if (featuredGrid && featuredGrid.parentNode) {
-    featuredGrid.parentNode.insertBefore(progressHeader, featuredGrid);
+  const featuredTitleEl = Array.from(document.querySelectorAll('h2, h3'))
+    .find(h => (h.textContent || '').trim().toLowerCase().includes('featured items'));
+  if (featuredTitleEl && featuredTitleEl.parentNode) {
+    const titleWrapper = featuredTitleEl.closest('.text-center') || featuredTitleEl;
+    titleWrapper.parentNode.insertBefore(progressHeader, titleWrapper);
   } else {
-    const shopItemsHeading = document.querySelector('h2, .text-2xl, [class*="text-2xl"]');
-    const shopItemsSection = document.querySelector('[class*="grid"], .grid');
-
-    if (shopItemsSection && shopItemsSection.parentNode) {
-      shopItemsSection.parentNode.insertBefore(progressHeader, shopItemsSection.nextSibling);
-    } else if (shopItemsHeading && shopItemsHeading.parentNode) {
-      shopItemsHeading.parentNode.insertBefore(progressHeader, shopItemsHeading.nextSibling);
+    const featuredGrid = document.querySelector('.coolshits-grid');
+    if (featuredGrid && featuredGrid.parentNode) {
+      featuredGrid.parentNode.insertBefore(progressHeader, featuredGrid);
     } else {
-      const shopContainer = document.querySelector('main') || document.querySelector('.container') || document.body;
-      const firstNewCard = document.querySelector('[id^="item-"]');
-      const firstOldCard = document.querySelector('.card-with-gradient[data-controller="card"]');
-      const anchor = firstNewCard || firstOldCard;
-      if (anchor && anchor.parentNode) {
-        anchor.parentNode.insertBefore(progressHeader, anchor.nextSibling);
+      const shopItemsHeading = document.querySelector('h2, .text-2xl, [class*="text-2xl"]');
+      const shopItemsSection = document.querySelector('[class*="grid"], .grid');
+
+      if (shopItemsSection && shopItemsSection.parentNode) {
+        shopItemsSection.parentNode.insertBefore(progressHeader, shopItemsSection.nextSibling);
+      } else if (shopItemsHeading && shopItemsHeading.parentNode) {
+        shopItemsHeading.parentNode.insertBefore(progressHeader, shopItemsHeading.nextSibling);
       } else {
-        shopContainer.appendChild(progressHeader);
+        const shopContainer = document.querySelector('main') || document.querySelector('.container') || document.body;
+        const firstNewCard = document.querySelector('[id^="item-"]');
+        const firstOldCard = document.querySelector('.card-with-gradient[data-controller="card"]');
+        const anchor = firstNewCard || firstOldCard;
+        if (anchor && anchor.parentNode) {
+          anchor.parentNode.insertBefore(progressHeader, anchor.nextSibling);
+        } else {
+          shopContainer.appendChild(progressHeader);
+        }
       }
     }
   }
