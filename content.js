@@ -6132,21 +6132,27 @@ function addGoalsProgressHeader() {
     return;
   }
   
-  const shopItemsHeading = document.querySelector('h2, .text-2xl, [class*="text-2xl"]');
-  const shopItemsSection = document.querySelector('[class*="grid"], .grid');
-  
-  if (shopItemsSection) {
-    shopItemsSection.parentNode.insertBefore(progressHeader, shopItemsSection);
-  } else if (shopItemsHeading) {
-    shopItemsHeading.parentNode.insertBefore(progressHeader, shopItemsHeading.nextSibling);
+  const featuredGrid = document.querySelector('.coolshits-grid');
+  if (featuredGrid && featuredGrid.parentNode) {
+    featuredGrid.parentNode.insertBefore(progressHeader, featuredGrid);
   } else {
-    const shopContainer = document.querySelector('main') || document.querySelector('.container') || document.body;
-    const shopCards = document.querySelectorAll('.card-with-gradient[data-controller="card"]');
-    
-    if (shopCards.length > 0) {
-      shopCards[0].parentNode.insertBefore(progressHeader, shopCards[0]);
+    const shopItemsHeading = document.querySelector('h2, .text-2xl, [class*="text-2xl"]');
+    const shopItemsSection = document.querySelector('[class*="grid"], .grid');
+
+    if (shopItemsSection && shopItemsSection.parentNode) {
+      shopItemsSection.parentNode.insertBefore(progressHeader, shopItemsSection.nextSibling);
+    } else if (shopItemsHeading && shopItemsHeading.parentNode) {
+      shopItemsHeading.parentNode.insertBefore(progressHeader, shopItemsHeading.nextSibling);
     } else {
-      shopContainer.appendChild(progressHeader);
+      const shopContainer = document.querySelector('main') || document.querySelector('.container') || document.body;
+      const firstNewCard = document.querySelector('[id^="item-"]');
+      const firstOldCard = document.querySelector('.card-with-gradient[data-controller="card"]');
+      const anchor = firstNewCard || firstOldCard;
+      if (anchor && anchor.parentNode) {
+        anchor.parentNode.insertBefore(progressHeader, anchor.nextSibling);
+      } else {
+        shopContainer.appendChild(progressHeader);
+      }
     }
   }
   
@@ -6172,7 +6178,7 @@ function addGoalsProgressHeader() {
 }
 
 function updateAllGoalButtons() {
-  const shopCards = document.querySelectorAll('.card-with-gradient[data-controller="card"]');
+  const shopCards = document.querySelectorAll('.card-with-gradient[data-controller="card"], [id^="item-"]');
   shopCards.forEach(card => {
     const existingContainer = card.querySelector('.som-goal-button-container');
     const existingAccordion = card.querySelector('.som-stats-accordion');
@@ -6200,7 +6206,7 @@ function updateGoalsProgressHeader() {
 }
 
 function processShopPage() {
-  const shopCards = document.querySelectorAll('.card-with-gradient[data-controller="card"]');
+  const shopCards = document.querySelectorAll('.card-with-gradient[data-controller="card"], [id^="item-"]');
   addGoalsProgressHeader();
   
   shopCards.forEach(card => {
