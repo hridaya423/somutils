@@ -7293,6 +7293,550 @@ function createShopOrdersSummarySection(ordersData) {
   }
 }
 
+let allProjects = [];
+let isLoadingProjects = false;
+const CACHE_DURATION = 24 * 60 * 60 * 1000;
+const CACHE_KEY = 'som_utils_projects_cache';
+
+function updateProgress(current, total, text) {
+  const searchResults = document.getElementById('som-search-results');
+  const searchInput = document.getElementById('som-project-search');
+
+  if (searchResults && searchInput && document.activeElement === searchInput) {
+    const percentage = Math.round((current / total) * 100);
+    const progressText = text || `Loading projects... ${current}/${total} pages (${percentage}%)`;
+
+    searchResults.innerHTML = `
+      <div class="som-progress-dropdown">
+        <div class="som-progress-header">
+          <div class="som-progress-icon">📊</div>
+          <div class="som-progress-title">Loading Projects</div>
+        </div>
+        <div class="som-progress-bar">
+          <div class="som-progress-fill" style="width: ${percentage}%"></div>
+        </div>
+        <div class="som-progress-text">${progressText}</div>
+        <div class="som-progress-stats">
+          ${current > 0 ? `Loading from SOM...` : 'Initializing...'}
+        </div>
+      </div>
+    `;
+
+    searchResults.classList.add('show');
+
+    if (current >= total) {
+      setTimeout(() => {
+        searchResults.classList.remove('show');
+      }, 1000);
+    }
+  }
+}
+
+function hideProgress() {
+  const searchResults = document.getElementById('som-search-results');
+  if (searchResults) {
+    searchResults.classList.remove('show');
+  }
+}
+
+
+window.refreshProjectData = async function() {
+  const searchResults = document.getElementById('som-search-results');
+  const searchLoading = document.getElementById('som-search-loading');
+  const searchInput = document.getElementById('som-project-search');
+
+  if (searchLoading) searchLoading.classList.add('show');
+
+  try {
+    await fetchAllProjects(true);
+    if (searchInput && searchInput.value.trim()) {
+      const results = searchProjects(searchInput.value, allProjects);
+      await renderSearchResults(results, searchResults);
+      searchResults.classList.add('show');
+    }
+  } catch (error) {
+    console.error('SOM Utils: Error during manual refresh:', error);
+  } finally {
+    if (searchLoading) searchLoading.classList.remove('show');
+  }
+};
+
+async function fetchAllProjects(forceRefresh = false) {
+  if (!forceRefresh) {
+    try {
+      const cachedData = localStorage.getItem(CACHE_KEY);
+
+      if (cachedData) {
+        const cache = JSON.parse(cachedData);
+        const timeDiff = Date.now() - cache.t;
+
+        if (timeDiff < CACHE_DURATION) {
+          const projects = cache.p.map(p => ({
+            id: p[0],
+            title: p[1],
+            description: p[2],
+            devlogs_count: p[3],
+            total_seconds_coded: p[4],
+            banner: p[5],
+            demo_link: p[6],
+            repo_link: p[7],
+            followers: new Array(p[8]).fill({})
+          }));f
+
+          allProjects = projects;
+          return projects;
+        }
+      }
+    } catch (error) {
+      console.warn('SOM Utils: Error reading cache from localStorage:', error);
+    }
+  }
+
+  if (isLoadingProjects) {
+    return allProjects;
+  }
+
+  isLoadingProjects = true;
+
+  try {
+    const projects = [];
+    let page = 1;
+    let totalPages = 1;
+
+    updateProgress(0, 1, 'Starting to load projects...');
+
+    while (page <= totalPages) {
+      updateProgress(page - 1, totalPages, `Loading projects... ${page}/${totalPages} pages`);
+
+      const response = await fetch(`https://summer.hackclub.com/api/v1/projects?page=${page}`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (data.projects && Array.isArray(data.projects)) {
+        projects.push(...data.projects);
+      }
+
+      if (data.pagination && data.pagination.pages) {
+        totalPages = data.pagination.pages;
+      }
+
+      page++;
+
+      if (page <= totalPages && page % 10 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+    }
+
+    updateProgress(totalPages, totalPages, `Loaded ${projects.length} projects successfully!`);
+    try {
+      const compact = projects.map(p => [
+        p.id,
+        p.title || '',
+        (p.description || '').substring(0, 200),
+        p.devlogs_count || 0,
+        p.total_seconds_coded || 0,
+        p.banner || '',
+        p.demo_link || '',
+        p.repo_link || '',
+        (p.followers || []).length
+      ]);
+
+      const cacheData = {
+        p: compact,
+        t: Date.now()
+      };
+
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+    } catch (error) {
+      console.warn('SOM Utils: Could not save to localStorage:', error);
+    }
+
+    allProjects = projects;
+    return projects;
+  } catch (error) {
+    console.error('SOM Utils: Error fetching projects:', error);
+    hideProgress();
+    return allProjects;
+  } finally {
+    isLoadingProjects = false;
+  }
+}
+
+function createProjectSearchBar() {
+  const searchContainer = document.createElement('div');
+  searchContainer.className = 'som-project-search-container';
+  searchContainer.innerHTML = `
+    <div class="som-search-wrapper">
+      <div class="som-search-input-container">
+        <svg class="som-search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="M21 21l-4.35-4.35"></path>
+        </svg>
+        <div class="som-search-shadow" id="som-search-shadow"></div>
+        <input
+          type="text"
+          placeholder="Search projects by name, description, or creator..."
+          class="som-search-input"
+          id="som-project-search"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <div class="som-search-loading" id="som-search-loading">
+          <div class="som-spinner"></div>
+        </div>
+      </div>
+      <div class="som-search-results" id="som-search-results"></div>
+    </div>
+  `;
+  return searchContainer;
+}
+
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+function searchProjects(query, projects) {
+  if (!query.trim()) return [];
+
+  const searchTerm = query.toLowerCase().trim();
+  const results = projects.filter(project => {
+    const titleMatch = project.title?.toLowerCase().includes(searchTerm);
+    const descriptionMatch = project.description?.toLowerCase().includes(searchTerm);
+    const categoryMatch = project.category?.toLowerCase().includes(searchTerm);
+
+    const titleWords = project.title?.toLowerCase().split(/\s+/) || [];
+    const exactTitleMatch = titleWords.some(word => word.includes(searchTerm));
+
+    return titleMatch || descriptionMatch || categoryMatch || exactTitleMatch;
+  });
+
+  results.sort((a, b) => {
+    const aTitle = a.title?.toLowerCase() || '';
+    const bTitle = b.title?.toLowerCase() || '';
+
+    const aStartsWithQuery = aTitle.startsWith(searchTerm);
+    const bStartsWithQuery = bTitle.startsWith(searchTerm);
+
+    if (aStartsWithQuery && !bStartsWithQuery) return -1;
+    if (!aStartsWithQuery && bStartsWithQuery) return 1;
+
+    const aExactMatch = aTitle === searchTerm;
+    const bExactMatch = bTitle === searchTerm;
+
+    if (aExactMatch && !bExactMatch) return -1;
+    if (!aExactMatch && bExactMatch) return 1;
+
+    return b.devlogs_count - a.devlogs_count;
+  });
+
+  return results.slice(0, 8);
+}
+
+function generateAutocompleteSuggestions(query, projects) {
+  if (!query.trim() || query.length < 2) return [];
+
+  const searchTerm = query.toLowerCase().trim();
+  const suggestions = new Set();
+
+  projects.forEach(project => {
+    if (!project.title) return;
+
+    const title = project.title.toLowerCase();
+    if (title.startsWith(searchTerm)) {
+      suggestions.add(project.title);
+    } else if (title.includes(searchTerm)) {
+      suggestions.add(project.title);
+    }
+    const words = project.title.split(/\s+/);
+    words.forEach(word => {
+      if (word.toLowerCase().startsWith(searchTerm)) {
+        suggestions.add(project.title);
+      }
+    });
+  });
+
+  const suggestionArray = Array.from(suggestions);
+  suggestionArray.sort((a, b) => {
+    const aLower = a.toLowerCase();
+    const bLower = b.toLowerCase();
+
+    if (aLower === searchTerm) return -1;
+    if (bLower === searchTerm) return 1;
+    const aStartsWith = aLower.startsWith(searchTerm);
+    const bStartsWith = bLower.startsWith(searchTerm);
+
+    if (aStartsWith && !bStartsWith) return -1;
+    if (!aStartsWith && bStartsWith) return 1;
+    return a.length - b.length;
+  });
+
+  return suggestionArray.slice(0, 8);
+}
+
+
+async function renderSearchResults(results, container) {
+  if (results.length === 0) {
+    container.innerHTML = `
+      <div class="som-no-results">
+        <div class="som-no-results-text">No projects found matching your search.</div>
+        <button class="som-refresh-button" onclick="refreshProjectData()">
+          Didn't find the project? Click to hard refresh the data
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = await Promise.all(results.map(async project => {
+    const devlogText = project.devlogs_count === 1 ? 'devlog' : 'devlogs';
+
+    let timeText = 'No time logged';
+    if (project.total_seconds_coded) {
+      const totalHours = Math.floor(project.total_seconds_coded / 3600);
+      const totalMinutes = Math.floor((project.total_seconds_coded % 3600) / 60);
+
+      if (totalHours > 0 && totalMinutes > 0) {
+        timeText = `${totalHours}h ${totalMinutes}m coded`;
+      } else if (totalHours > 0) {
+        timeText = `${totalHours}h coded`;
+      } else if (totalMinutes > 0) {
+        timeText = `${totalMinutes}m coded`;
+      } else {
+        timeText = 'Less than 1m coded';
+      }
+    }
+
+    const followersText = project.followers && project.followers.length > 0 ?
+      `${project.followers.length} follower${project.followers.length === 1 ? '' : 's'}` : '';
+
+    const links = [];
+    if (project.demo_link) {
+      links.push(`<a href="${escapeHtml(project.demo_link)}" target="_blank" class="som-project-link">Demo</a>`);
+    }
+    if (project.repo_link) {
+      links.push(`<a href="${escapeHtml(project.repo_link)}" target="_blank" class="som-project-link">Repo</a>`);
+    }
+    const linksHtml = links.length > 0 ? `<div class="som-project-links">${links.join('')}</div>` : '';
+
+    let bannerUrl = '';
+    if (project.banner) {
+      if (project.banner.startsWith('http://') || project.banner.startsWith('https://')) {
+        bannerUrl = project.banner;
+      } else {
+        bannerUrl = `https://summer.hackclub.com${project.banner.startsWith('/') ? '' : '/'}${project.banner}`;
+      }
+    }
+
+    const bannerImage = bannerUrl ?
+      `<img src="${bannerUrl}" alt="${escapeHtml(project.title)}" class="som-result-banner" loading="lazy">` :
+      `<div class="som-result-banner-placeholder">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17l2.5-3.15L14 17H9zm4.5-6L16 14h-6l3-3.86L13.5 11z"/>
+        </svg>
+      </div>`;
+
+    const metaParts = [`${project.devlogs_count} ${devlogText}`, timeText];
+    if (followersText) metaParts.push(followersText);
+
+    return `
+      <div class="som-search-result" data-project-id="${project.id}">
+        <div class="som-result-banner-container">
+          ${bannerImage}
+        </div>
+        <div class="som-result-content">
+          <div class="som-result-header">
+            <div class="som-result-title">${escapeHtml(project.title)}</div>
+          </div>
+          <div class="som-result-meta">
+            ${metaParts.join(' • ')}
+          </div>
+          <div class="som-result-description">${escapeHtml(project.description || 'No description available.')}</div>
+          ${linksHtml}
+        </div>
+      </div>
+    `;
+  })).then(htmlArray => htmlArray.join(''));
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function setupProjectSearch() {
+  const searchInput = document.getElementById('som-project-search');
+  const searchResults = document.getElementById('som-search-results');
+  const searchLoading = document.getElementById('som-search-loading');
+  const shadowText = document.getElementById('som-search-shadow');
+
+  if (!searchInput || !searchResults || !searchLoading || !shadowText) {
+    console.error('SOM Utils: Search elements not found');
+    return;
+  }
+
+
+  let currentSuggestion = '';
+
+  const performSearch = debounce(async (query) => {
+    if (!query.trim()) {
+      searchResults.classList.remove('show');
+      return;
+    }
+
+    searchLoading.classList.add('show');
+
+    try {
+      if (allProjects.length === 0 && !isLoadingProjects) {
+        await fetchAllProjects();
+      } else if (isLoadingProjects) {
+        searchResults.innerHTML = `
+          <div class="som-loading-message">
+            <div class="som-loading-icon">⏳</div>
+            <div class="som-loading-text">Loading projects...</div>
+            <div class="som-loading-subtext">Please wait while we fetch all projects. You can search once loading is complete.</div>
+          </div>
+        `;
+        searchResults.classList.add('show');
+        searchLoading.classList.remove('show');
+        return;
+      }
+
+      const results = searchProjects(query, allProjects);
+      await renderSearchResults(results, searchResults);
+      searchResults.classList.add('show');
+    } catch (error) {
+      console.error('SOM Utils: Search error:', error);
+      searchResults.innerHTML = '<div class="som-no-results">Error occurred while searching. Please try again.</div>';
+      searchResults.classList.add('show');
+    } finally {
+      searchLoading.classList.remove('show');
+    }
+  }, 300);
+
+  const updateInlineAutocomplete = debounce(async (query) => {
+    if (!query.trim() || query.length < 2) {
+      shadowText.textContent = '';
+      currentSuggestion = '';
+      return;
+    }
+
+    try {
+      if (allProjects.length === 0 && !isLoadingProjects) {
+        await fetchAllProjects();
+      }
+
+      const suggestions = generateAutocompleteSuggestions(query, allProjects);
+      if (suggestions.length > 0) {
+        const bestSuggestion = suggestions[0];
+        const queryLower = query.toLowerCase();
+        const suggestionLower = bestSuggestion.toLowerCase();
+
+        if (suggestionLower.startsWith(queryLower) && bestSuggestion.length > query.length) {
+          currentSuggestion = bestSuggestion;
+          const remainingText = bestSuggestion.substring(query.length);
+          shadowText.textContent = query + remainingText;
+        } else {
+          shadowText.textContent = '';
+          currentSuggestion = '';
+        }
+      } else {
+        shadowText.textContent = '';
+        currentSuggestion = '';
+      }
+    } catch (error) {
+      console.error('SOM Utils: Inline autocomplete error:', error);
+    }
+  }, 100);
+
+  searchInput.addEventListener('input', (e) => {
+    const query = e.target.value;
+    updateInlineAutocomplete(query);
+    performSearch(query);
+  });
+
+  searchInput.addEventListener('keydown', (e) => {
+    switch (e.key) {
+      case 'Tab':
+        if (currentSuggestion && currentSuggestion.length > searchInput.value.length) {
+          e.preventDefault();
+          searchInput.value = currentSuggestion;
+          shadowText.textContent = '';
+          currentSuggestion = '';
+          performSearch(searchInput.value);
+        }
+        break;
+
+      case 'Escape':
+        e.preventDefault();
+        searchResults.classList.remove('show');
+        shadowText.textContent = '';
+        currentSuggestion = '';
+        break;
+    }
+  });
+
+  searchInput.addEventListener('focus', () => {
+    const query = searchInput.value.trim();
+    if (query) {
+      if (query.length >= 2) {
+        updateInlineAutocomplete(query);
+      }
+      if (searchResults.children.length > 0) {
+        searchResults.classList.add('show');
+      }
+    }
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.som-search-wrapper')) {
+      searchResults.classList.remove('show');
+      shadowText.textContent = '';
+      currentSuggestion = '';
+    }
+  });
+
+  searchResults.addEventListener('click', (e) => {
+    const resultElement = e.target.closest('.som-search-result');
+    if (resultElement) {
+      const projectId = resultElement.dataset.projectId;
+      if (projectId) {
+        window.location.href = `/projects/${projectId}`;
+      }
+    }
+  });
+}
+
+function processExplorePage() {
+  setTimeout(() => {
+    const navContainer = document.querySelector('.flex.flex-col.justify-between.items-start.mb-4.md\\:mb-6.px-4.md\\:px-8.pt-2.md\\:pt-8.pb-2.max-w-7xl.mx-auto') ||
+                        document.querySelector('[class*="flex"][class*="flex-col"][class*="justify-between"]') ||
+                        document.querySelector('main > div:first-child') ||
+                        document.querySelector('main');
+
+    if (navContainer && !document.querySelector('.som-project-search-container')) {
+      const searchBar = createProjectSearchBar();
+      navContainer.appendChild(searchBar);
+
+      setTimeout(() => {
+        setupProjectSearch();
+        fetchAllProjects();
+      }, 100);
+    }
+  }, 500);
+}
+
 function processCurrentPage() {
   const currentPath = window.location.pathname;
   const now = Date.now();
@@ -7349,6 +7893,8 @@ function processCurrentPage() {
       processBlackMarketPage();
     } else if (currentPath === '/campfire') {
       processCampfirePage();
+    } else if (currentPath === '/explore' || currentPath === '/explore/gallery') {
+      processExplorePage();
     } else if (currentPath.match(/^\/admin\/users\/\d+$/)) {
       processAdminUserPage();
     } else if (currentPath.match(/^\/admin\/shop_orders\/\d+$/)) {
